@@ -22,7 +22,7 @@ export async function analyzeToken(client, mint, opts) {
   progress(opts.onProgress, "markets", 0.15);
   const mkr = await getMarkets(client, [mint]);
   progress(opts.onProgress, "token", 0.45);
-  const r = await assess(client, mint, mkr.data[mint] || null, { marketUnknown: mkr.failed.length > 0, skipConcentration: opts.skipConcentration });
+  const r = await assess(client, mint, mkr.data[mint] || null, { marketUnknown: mkr.failed.length > 0, skipConcentration: opts.skipConcentration, skipCreator: opts.skipCreator });
   if (!r) throw new ScanError("IS_NFT", "that address is an NFT, not a token");
   progress(opts.onProgress, "done", 1);
   return r;
@@ -62,7 +62,7 @@ export async function analyzeWallet(client, wallet, opts) {
 
   let done = 0;
   await pool(todo, opts.concurrency || 3, async function (t) {
-    const r = await assess(client, t.mint, t.pair, { value: t.value, marketUnknown: t.unknown, skipConcentration: opts.skipConcentration });
+    const r = await assess(client, t.mint, t.pair, { value: t.value, marketUnknown: t.unknown, skipConcentration: opts.skipConcentration, skipCreator: opts.skipCreator });
     if (r) out.push(r);
     done++;
     progress(onProgress, "tokens", 0.2 + 0.8 * done / Math.max(1, todo.length), { done: done, total: todo.length });

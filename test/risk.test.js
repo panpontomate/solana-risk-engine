@@ -102,6 +102,28 @@ test("RugCheck unlocked LP only counts on young, non-soft markets", () => {
   assert.equal(m.s, "ok");
 });
 
+test("no unlocked-LP signal while a token is on Pump.fun's bonding curve", () => {
+  const i = info(), rc = { lpLockedPct: 0 };
+  for (const dexId of ["pumpfun", "pump-fun"]) {
+    const m = buildLights(i, goodConc, pair({ dexId, pairCreatedAt: NOW - 0.1 * DAY }), 0, "OPEN", rc, NOW)[2];
+    assert.ok(!m.items.some((x) => x.code === "MKT_LP_UNLOCKED"), dexId);
+  }
+  // once it graduates to a real pool the check applies again
+  const g = buildLights(i, goodConc, pair({ dexId: "pumpswap", pairCreatedAt: NOW - 0.1 * DAY }), 0, "OPEN", rc, NOW)[2];
+  assert.ok(g.items.some((x) => x.code === "MKT_LP_UNLOCKED"));
+});
+
+test("serial creators: 2+ other launches in 24 h warn, 5+ are bad", () => {
+  const i = info(), p = pair();
+  const ctl = (day) => buildLights(i, goodConc, p, 0, "OPEN", null, NOW, day === null ? null : { creator: "C", day, total: day })[0];
+  assert.equal(ctl(null).s, "ok");
+  assert.equal(ctl(1).s, "ok");
+  assert.equal(ctl(2).s, "warn");
+  assert.deepEqual(ctl(2).items[0], { code: "CTL_SERIAL_CREATOR", s: "warn", data: { n: 2, creator: "C" } });
+  assert.equal(ctl(5).s, "bad");
+  assert.equal(levelFrom(buildLights(i, goodConc, p, 0, "OPEN", null, NOW, { creator: "C", day: 11, total: 50 })).lvl, "MEDIUM");
+});
+
 test("heavy position and bridged off-Solana note", () => {
   const i = info({ mintAuth: "P", authKind: { P: "program" } }), p = pair({ liquidity: { usd: 20000 } });
   const lights = buildLights(i, goodConc, p, 5000, "BRIDGED", null, NOW);
@@ -153,4 +175,8 @@ test("impostorOf catches copies of famous tokens", () => {
   assert.deepEqual(impostorOf("Fake111", { baseToken: { symbol: "USDC.e?", name: "USD Coin" } }), { sym: "USDC", real: USDC });
   assert.equal(impostorOf(FAMOUS.BONK, { baseToken: { symbol: "BONK" } }), null);
   assert.equal(impostorOf("Fake111", { baseToken: { symbol: "NEWCOIN" } }), null);
+  // a Pump.fun "BTC" (Big Titty Coin) is not Bitcoin: on Solana it only exists bridged
+  assert.deepEqual(impostorOf("Fake111pump", { baseToken: { symbol: "BTC", name: "Big Titty Coin" } }), { sym: "BTC", real: FAMOUS.WBTC });
+  assert.equal(impostorOf(FAMOUS.WBTC, { baseToken: { symbol: "WBTC" } }), null);
+  assert.equal(impostorOf("Fake111", { baseToken: { symbol: "cbBTC" } }), null);
 });

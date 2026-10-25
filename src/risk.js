@@ -1,9 +1,9 @@
-import { EXT_POINTS, RANKS } from "./constants.js";
+import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
 import { impostorOf } from "./markets.js";
-import { rugcheckSummary } from "./rugcheck.js";
+import { rugcheckSummary, creatorLaunches } from "./rugcheck.js";
 
 // Every finding is a "signal": {code, s, data}. `s` is ok | na | warn | bad, `data` holds the numbers
 // behind it. Turning signals into sentences is i18n's job (describe / explainLight), never the engine's.
@@ -14,6 +14,8 @@ function sig(code, s, data) {
 }
 
 const DAY = 86400000;
+// Other tokens launched by the same creator in the last 24 h that make it a serial launcher
+export const SERIAL_WARN = 2, SERIAL_BAD = 5;
 
 /* ---------- old point score: only for tokens without a market, to spot spam ---------- */
 export function score(info) {
@@ -71,9 +73,10 @@ function mkLight(k, items, okSignal) {
  * @param value  USD value the analysed wallet holds (0 when checking a token alone)
  * @param type   tokenType(info, pair)
  * @param rc     RugCheck summary or null
+ * @param launches  creatorLaunches result or null: other tokens the creator launched in the last 24 h
  * @returns      [control, concentration, market, dependency]
  */
-export function buildLights(info, conc, pair, value, type, rc, now) {
+export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   now = now || Date.now();
   const ak = (info && info.authKind) || {};
   let it;
@@ -89,6 +92,9 @@ export function buildLights(info, conc, pair, value, type, rc, now) {
     if (info.ext.indexOf("nonTransferable") >= 0) it.push(sig("CTL_NON_TRANSFERABLE", "warn"));
     if (info.ext.indexOf("defaultAccountState") >= 0) it.push(sig("CTL_DEFAULT_FROZEN", "warn"));
   }
+  // Launch farms put out a token every few minutes and drop each one as soon as buyers arrive: in a
+  // 100-token Pump.fun sample one wallet launched 7 copies of "GMS" in 10 minutes
+  if (launches && launches.day >= SERIAL_WARN) it.push(sig("CTL_SERIAL_CREATOR", launches.day >= SERIAL_BAD ? "bad" : "warn", { n: launches.day, creator: launches.creator }));
   const control = mkLight("control", it, sig((info && (info.mintAuth || info.freezeAuth)) ? "CTL_ONLY_PROGRAMS" : "CTL_NONE", "ok"));
 
   // 2) concentration in people (pools and programs do not count)
@@ -125,7 +131,10 @@ export function buildLights(info, conc, pair, value, type, rc, now) {
   // veteran tokens (JUP, WIF...) many market makers provide it and unlocked LP is not a signal: applying
   // it there gave false positives (JUP scored worse than a new memecoin)
   const young = !pair.pairCreatedAt || (now - pair.pairCreatedAt) / DAY < 90;
-  if (rc && !soft && young && liq > 0 && typeof rc.lpLockedPct === "number" && isFinite(rc.lpLockedPct)) {
+  // On Pump.fun's bonding curve there is no LP at all: the curve program holds the liquidity and nobody
+  // can pull it (RugCheck reports 0% locked, which flagged 49 of 75 curve tokens in a 100-token sample)
+  const onCurve = PUMP_CURVE_DEXES.indexOf(pair.dexId) >= 0;
+  if (rc && !soft && young && !onCurve && liq > 0 && typeof rc.lpLockedPct === "number" && isFinite(rc.lpLockedPct)) {
     if (rc.lpLockedPct < 20) it.push(sig("MKT_LP_UNLOCKED", "bad", { pct: rc.lpLockedPct }));
     else if (rc.lpLockedPct < 60) it.push(sig("MKT_LP_PARTLY_LOCKED", "warn", { pct: rc.lpLockedPct }));
   }
@@ -181,6 +190,7 @@ export function reasonsFrom(lights) {
  * @param [opts.value]           USD the analysed wallet holds of it (for the "heavy position" check)
  * @param [opts.marketUnknown]   the DexScreener batch for this mint failed: no data, not "no market"
  * @param [opts.skipConcentration]
+ * @param [opts.skipCreator]     do not ask RugCheck what else the creator launched (markets under 7 days only)
  * @returns null for NFTs, otherwise {mint, sym, name, lvl, sev, pts, type, lights, reasons, impostor, value, pair, img}
  */
 export async function assess(client, mint, pair, opts) {
@@ -193,6 +203,9 @@ export async function assess(client, mint, pair, opts) {
     };
   }
   const rcPromise = pair ? rugcheckSummary(client, mint) : Promise.resolve(null);   // in parallel with the RPC calls below
+  // Serial launching only matters while a token is new; RugCheck's full report is small (~10 KB) then
+  const fresh = pair && !opts.skipCreator && (!pair.pairCreatedAt || Date.now() - pair.pairCreatedAt < 7 * DAY);
+  const launchPromise = fresh ? creatorLaunches(client, mint) : Promise.resolve(null);
   let info = null, conc = null;
   try { info = await getMint(client, mint); } catch (e) { if (isCancel(e)) throw e; }
   if (info && info.decimals === 0 && info.supply === 1) return null;   // NFT
@@ -208,12 +221,12 @@ export async function assess(client, mint, pair, opts) {
       catch (e) { if (isCancel(e)) throw e; conc = null; if (!tryC) await sleep(client.retryDelayMs === undefined ? 1500 : client.retryDelayMs); }
     }
   }
-  const rc = await rcPromise;
+  const rc = await rcPromise, launches = await launchPromise;
   const base = (pair && pair.baseToken) || {};
   let lvl, sev = 0, reasons = [], lights = null, type = null, pts = 0, imp = null;
   if (pair) {
     type = tokenType(info, pair);
-    lights = buildLights(info, conc, pair, value, type, rc);
+    lights = buildLights(info, conc, pair, value, type, rc, null, launches);
     imp = impostorOf(mint, pair);
     if (imp) {
       const prev = lights[0];
@@ -229,6 +242,7 @@ export async function assess(client, mint, pair, opts) {
     mint: mint, sym: base.symbol || short(mint), name: base.name || "", pts: pts, sev: sev,
     lvl: lvl, type: type, lights: lights, reasons: reasons, impostor: imp, value: value, pair: pair,
     rugcheck: rc ? { lpLockedPct: rc.lpLockedPct, score: rc.score_normalised !== undefined ? rc.score_normalised : rc.score } : null,
+    creator: launches,
     img: (pair && pair.info && pair.info.imageUrl) || null
   };
 }

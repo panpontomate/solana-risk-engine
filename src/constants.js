@@ -12,6 +12,9 @@ export const COINGECKO_SOL = "https://api.coingecko.com/api/v3/coins/solana/mark
 export const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 export const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 export const SYSTEM_PROGRAM = "11111111111111111111111111111111";
+export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+// dexId of a token still on Pump.fun's bonding curve: DexScreener says "pumpfun", GeckoTerminal "pump-fun"
+export const PUMP_CURVE_DEXES = ["pumpfun", "pump-fun"];
 
 export const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
@@ -34,7 +37,10 @@ export const FAMOUS = {
   PUMP: "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn", JLP: "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4",
   POPCAT: "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr", HNT: "hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux",
   RENDER: "rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof", ORCA: "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
-  DRIFT: "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7"
+  DRIFT: "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
+  // Bitcoin and Ether only exist on Solana bridged: a Pump.fun token called "BTC" is never the real one
+  BTC: "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh", WBTC: "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+  ETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs", WETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs"
 };
 
 // Token-2022 extensions that add risk, with the points they add to the no-market spam score

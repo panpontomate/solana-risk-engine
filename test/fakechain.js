@@ -40,7 +40,7 @@ export function pda(label) {
  *   owners:  { [address]: programId }                       who owns each account (SYSTEM_PROGRAM = wallet)
  *   wallets: { [wallet]: { sol, tokens: { [mint]: uiAmount } } }
  *   sigs:    { [address]: [{ signature, blockTime }] }      newest first
- *   txs:     { [signature]: payer }
+ *   txs:     { [signature]: payer | full transaction object }
  *   pairs:   [ DexScreener pairs ]
  *   rugcheck:{ [mint]: { summary, report, graph } }
  *   swaps:   { [wallet]: [ Helius parsed txs ] }
@@ -97,6 +97,7 @@ export function fakeChain(world) {
       }
       case "getTransaction": {
         const payer = w.txs[p[0]];
+        if (payer && typeof payer === "object") return payer;   // a full transaction
         return payer ? { transaction: { message: { accountKeys: [{ pubkey: payer }] } } } : null;
       }
       default:

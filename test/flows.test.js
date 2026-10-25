@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createScanner, createClient, assess, getTokens, getConc, getAuthKinds, isMint, getMarkets, takeSnapshots, diffSnapshots,
-  fetchSwaps, isOnCurve, USDC, WSOL, TOKEN_2022, SYSTEM_PROGRAM, FAMOUS
+  fetchSwaps, isOnCurve, recentLaunches, USDC, WSOL, TOKEN_2022, SYSTEM_PROGRAM, PUMP_PROGRAM, FAMOUS
 } from "../src/index.js";
 import { fakeChain, addr, pda, pairOf, sigsOver, b58encode } from "./fakechain.js";
 import { generateKeyPairSync } from "node:crypto";
@@ -145,6 +145,42 @@ test("assess: tokens without a market are spam or just 'no market'", async () =>
   const r2 = await createScanner({ rpcUrl: OWN, fetch: f, retryDelayMs: 0 }).analyzeToken(clean.M);
   assert.equal(r2.lvl, "NO_MARKET");
   assert.ok(!f.calls.some((c) => c.method === "getTokenLargestAccounts"));   // no market: concentration skipped
+});
+
+test("assess: serial creator from RugCheck, only on markets under 7 days", async () => {
+  const w = riskWorld({}, { pairCreatedAt: Date.now() - 2 * DAY });
+  const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
+  w.rugcheck = { [w.M]: { report: { creator: "Creator1", creatorTokens: [
+    { mint: w.M, createdAt: ago(1) }, { mint: "A", createdAt: ago(1) }, { mint: "B", createdAt: ago(2) },
+    { mint: "C", createdAt: ago(3) }, { mint: "D", createdAt: ago(5) }, { mint: "E", createdAt: ago(9) }, { mint: "F", createdAt: ago(30) }] } } };
+  const r = await scanner(w).analyzeToken(w.M);
+  const s = r.lights[0].items.find((x) => x.code === "CTL_SERIAL_CREATOR");
+  assert.deepEqual(s, { code: "CTL_SERIAL_CREATOR", s: "bad", data: { n: 5, creator: "Creator1" } });
+  assert.deepEqual(r.creator, { creator: "Creator1", day: 5, total: 6 });
+  // skipCreator, or an old market: RugCheck's full report is not even asked for
+  const f = fakeChain(w);
+  await createScanner({ rpcUrl: OWN, fetch: f, retryDelayMs: 0 }).analyzeToken(w.M, { skipCreator: true });
+  const old = riskWorld({}, { pairCreatedAt: Date.now() - 30 * DAY }), f2 = fakeChain(Object.assign(old, { rugcheck: w.rugcheck }));
+  await createScanner({ rpcUrl: OWN, fetch: f2, retryDelayMs: 0 }).analyzeToken(old.M);
+  for (const x of [f, f2]) assert.ok(!x.calls.some((c) => /\/report$/.test(c.url)));
+});
+
+test("recentLaunches counts Pump.fun creations paid by a wallet in the last 24 h", async () => {
+  const W = addr("farm"), now = 1_800_000_000_000;
+  const launch = (m) => ({ transaction: { message: { accountKeys: [{ pubkey: W, signer: true }, { pubkey: m, signer: true }, { pubkey: PUMP_PROGRAM }] } },
+    meta: { logMessages: ["Program log: Instruction: CreateV2"], preTokenBalances: [], postTokenBalances: [{ mint: m }] } });
+  const buy = { transaction: { message: { accountKeys: [{ pubkey: W }, { pubkey: PUMP_PROGRAM }] } },
+    meta: { logMessages: ["Program log: Instruction: Buy"], preTokenBalances: [{ mint: "M1" }], postTokenBalances: [{ mint: "M1" }] } };
+  const sigs = [
+    { signature: "s1", blockTime: now / 1000 - 60 }, { signature: "s2", blockTime: now / 1000 - 120 },
+    { signature: "s3", blockTime: now / 1000 - 3600 }, { signature: "s4", blockTime: now / 1000 - 7200, err: { x: 1 } },
+    { signature: "s5", blockTime: now / 1000 - 2 * 86400 }];
+  const c = client({ sigs: { [W]: sigs }, txs: { s1: launch("M1"), s2: buy, s3: launch("M2"), s4: launch("M3"), s5: launch("M4") } });
+  const r = await recentLaunches(c, W, { now });
+  assert.equal(r.n, 2);
+  assert.deepEqual(r.mints.sort(), ["M1", "M2"]);
+  assert.equal(r.scanned, 3);
+  assert.equal(r.more, false);
 });
 
 test("assess: skipConcentration, unreadable mint, RugCheck LP signal and unknown market", async () => {

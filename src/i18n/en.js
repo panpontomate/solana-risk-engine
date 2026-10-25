@@ -36,6 +36,7 @@ export default {
     CTL_DEFAULT_FROZEN: () => "New accounts can be created frozen",
     CTL_ONLY_PROGRAMS: () => "Only program-controlled authorities (see dependency)",
     CTL_NONE: () => "No active authorities: nobody can mint more or freeze",
+    CTL_SERIAL_CREATOR: (d) => "The creator launched " + d.n + " other tokens in the last 24 h (per RugCheck): a serial launcher, who usually drops each token as soon as buyers arrive",
     IMPOSTOR: (d) => "Impersonates " + d.symbol + ": the real " + d.symbol + " has another address (" + short(d.real) + "). It is a copy, almost certainly a scam",
 
     CON_SKIPPED: () => "Holder concentration not checked",

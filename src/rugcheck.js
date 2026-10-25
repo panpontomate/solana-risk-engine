@@ -18,6 +18,18 @@ export function rugcheckReport(client, mint) {
   return client.softJson(RUGCHECK + mint + "/report", 10000);
 }
 
+// How many other tokens the creator launched in the last 24 h. Only for new tokens: their full report
+// is ~10 KB (the 700 KB ones are old tokens with many markets and holders).
+// @returns {creator, day, total} or null when RugCheck does not answer or does not know the creator
+export async function creatorLaunches(client, mint, now) {
+  const rc = await rugcheckReport(client, mint);
+  if (!rc || !rc.creator) return null;
+  now = now || Date.now();
+  const others = (rc.creatorTokens || []).filter(function (t) { return t && t.mint !== mint; });
+  const day = others.filter(function (t) { const at = Date.parse(t.createdAt); return at && now - at < 86400000; }).length;
+  return { creator: rc.creator, day: day, total: others.length };
+}
+
 // The report only gives each network's size; this endpoint gives its wallets and holdings
 export async function rugcheckGraph(client, mint) {
   const g = await client.softJson(RUGCHECK + mint + "/insiders/graph", 8000);

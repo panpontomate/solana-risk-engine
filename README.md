@@ -27,8 +27,9 @@ for (const l of r.lights)  // the four traffic lights
 | **Creator control** | Mint/freeze authority still active, and whether it sits in a person's wallet or a program (bridge, protocol, staking pool). A key off the ed25519 curve is always a program (PDA), even when the System Program owns its account. Risky Token-2022 extensions: permanent delegate, transfer hook, transfer fee, non-transferable, default-frozen accounts. |
 | **Real concentration** | Largest accounts are traced to their owners. Pools and programs are separated from people, so `w1`/`w10` measure *people*, not AMM vaults. |
 | **Inflated liquidity** | DexScreener values both sides of a pool at the pool's price. A pool with 4B of a token against 2 USDC shows "$4,000M liquidity". The engine recomputes it from the real side (USDC/USDT/SOL). It only flags extreme gaps (real side under 5%), because concentrated-liquidity pools are lopsided by nature. |
-| **Unlocked LP** | % of LP locked/burned via RugCheck. It only counts for markets under 90 days old, so veteran tokens don't get false positives. |
-| **Impostors** | Tokens using the symbol or name of a famous token (USDC, JUP, BONK, WIF...) with a different address. |
+| **Unlocked LP** | % of LP locked/burned via RugCheck. It only counts for markets under 90 days old, so veteran tokens don't get false positives, and never while a token is on Pump.fun's bonding curve, where there is no LP to pull. |
+| **Serial creators** | For markets under 7 days: how many other tokens the creator launched in the last 24 h (RugCheck). 2 or more is a warning, 5 or more a red flag. `recentLaunches(client, wallet)` counts the same on chain for the wallet that *paid* a launch, which catches farms that name a fresh creator each time. |
+| **Impostors** | Tokens using the symbol or name of a famous token (USDC, JUP, BONK, WIF, BTC, ETH...) with a different address. |
 | **Token type** | `STABLE`, `TOKENIZED`, `BRIDGED`, `CREATOR`, `OPEN`. Each type is judged by the rules that fit it: a bridged token normally has a program as mint authority, a memecoin does not. |
 | **Bots and exchanges** | Wallets that made 200 transactions in under 2 days are marked `active` and are not counted as whales. |
 | **Funder clusters** | The fee payer of each holder's *first* transaction reveals who created it. Holders sharing a funder are grouped, since that is often one team splitting the supply. Exchange hot wallets are excluded as sources. |
@@ -69,7 +70,7 @@ Methods (all accept `{ onProgress(step, fraction) }`):
 
 | Method | Returns |
 |---|---|
-| `analyzeToken(mint)` | `{ lvl, sev, type, lights, reasons, impostor, pair, ... }` |
+| `analyzeToken(mint, { skipCreator })` | `{ lvl, sev, type, lights, reasons, impostor, pair, creator, ... }` |
 | `analyzeWallet(wallet, { minUsd })` | `{ sol, balances, total, hidden, results: [token results] }` |
 | `analyzeAddress(addr)` | `{ kind: "token" \| "wallet", ... }`, detected automatically |
 | `analyzeHolders(mint)` | `{ rows, clusters, hotGroups, creator, ... }`. Best with your own RPC. |
