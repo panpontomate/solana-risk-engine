@@ -24,9 +24,9 @@ for (const l of r.lights)  // the four traffic lights
 
 | Check | How |
 |---|---|
-| **Creator control** | Mint/freeze authority still active, and whether it sits in a person's wallet or a program (bridge/protocol). For keys with no account, it checks whether the key is on the ed25519 curve. Risky Token-2022 extensions: permanent delegate, transfer hook, transfer fee, non-transferable, default-frozen accounts. |
+| **Creator control** | Mint/freeze authority still active, and whether it sits in a person's wallet or a program (bridge, protocol, staking pool). A key off the ed25519 curve is always a program (PDA), even when the System Program owns its account. Risky Token-2022 extensions: permanent delegate, transfer hook, transfer fee, non-transferable, default-frozen accounts. |
 | **Real concentration** | Largest accounts are traced to their owners. Pools and programs are separated from people, so `w1`/`w10` measure *people*, not AMM vaults. |
-| **Inflated liquidity** | DexScreener values both sides of a pool at the pool's price. A pool with 4B of a token against 2 USDC shows "$4,000M liquidity". The engine recomputes it from the real side (USDC/USDT/SOL) only. |
+| **Inflated liquidity** | DexScreener values both sides of a pool at the pool's price. A pool with 4B of a token against 2 USDC shows "$4,000M liquidity". The engine recomputes it from the real side (USDC/USDT/SOL). It only flags extreme gaps (real side under 5%), because concentrated-liquidity pools are lopsided by nature. |
 | **Unlocked LP** | % of LP locked/burned via RugCheck. It only counts for markets under 90 days old, so veteran tokens don't get false positives. |
 | **Impostors** | Tokens using the symbol or name of a famous token (USDC, JUP, BONK, WIF...) with a different address. |
 | **Token type** | `STABLE`, `TOKENIZED`, `BRIDGED`, `CREATOR`, `OPEN`. Each type is judged by the rules that fit it: a bridged token normally has a program as mint authority, a memecoin does not. |
@@ -37,7 +37,16 @@ for (const l of r.lights)  // the four traffic lights
 | **Confluence** | Tokens held in common by a group of wallets, each one risk-assessed. Also the reverse: people who are top holders of several tokens. |
 | **Change tracking** | Snapshots and diffs (new / bought more / sold part / sold all) per wallet and aggregated across many wallets. |
 
-Anything that could not be checked is marked `na`. It never counts as "fine": a token with a missing check can be **medium** at best, and `dataOnly(r)` tells you when that is the only reason.
+### How the level is decided
+
+- Two red lights, or one red and one yellow, give **HIGH**.
+- One red, or two yellows, give **MEDIUM**.
+- Otherwise the level is **LOW**, with two exceptions that raise it to **MEDIUM**:
+  - **A check could not run.** Lights that could not be checked are marked `na`, and they never count as "fine". `dataOnly(r)` tells you when this is the only reason.
+  - **The market is under 7 days old.** It has no track record yet.
+- An impostor of a famous token is always **HIGH**.
+
+A single yellow on an established token stays LOW, because those warnings are normal for its type (a staking pool's program-controlled mint, for example). This was measured on 62 real tokens: the 7-day rule moved 9 brand-new tokens from low to medium and no established one.
 
 ## Install
 

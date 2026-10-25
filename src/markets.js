@@ -5,14 +5,19 @@ import { sleep } from "./util.js";
 // DexScreener values both sides of a pool at the pool's own price. A scammer creates a pool with
 // 4 billion of their token against 2 real USDC and it shows "liquidity $4,000M". What you can actually
 // take out when selling is the real-token side (USDC, USDT or SOL): if that is much smaller, it wins.
+// Concentrated-liquidity pools (Orca Whirlpools, Raydium CLMM, Meteora DLMM) are lopsided by nature,
+// often 10-20% real side, so only an extreme gap counts: real side under 5% of the reported value.
+// The scams this targets sit far below that (2 USDC against "$4,000M" is 0.00000005%).
 // Mutates the pair: keeps the reported figure in liqRaw and replaces liquidity.usd with the real one.
+export const INFLATED_RATIO = 0.05;
+
 export function realLiq(p) {
   const l = p.liquidity, qa = p.quoteToken && p.quoteToken.address;
   if (!l || !l.usd || (qa !== USDC && qa !== USDT && qa !== WSOL)) return;
   const pn = Number(p.priceNative), pu = Number(p.priceUsd), q = Number(l.quote);
   if (!(pn > 0 && pu > 0 && q >= 0)) return;
   const real = 2 * q * pu / pn;   // pu/pn = USD price of the real token
-  if (real < 0.25 * l.usd) { p.liqRaw = l.usd; p.liquidity = Object.assign({}, l, { usd: real }); }
+  if (real < INFLATED_RATIO * l.usd) { p.liqRaw = l.usd; p.liquidity = Object.assign({}, l, { usd: real }); }
 }
 
 // A token using the symbol (or name) of a famous one but with another address is a copy

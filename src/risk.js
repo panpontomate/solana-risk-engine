@@ -151,6 +151,11 @@ export function levelFrom(lights) {
   let lvl = (b >= 2 || (b === 1 && w >= 1)) ? "HIGH" : ((b === 1 || w >= 2) ? "MEDIUM" : "LOW");
   // What could not be checked does not count as "fine": with a check missing, at best it is medium risk
   if (lvl === "LOW" && na > 0) lvl = "MEDIUM";
+  // A market under 7 days old has no track record: it is never "low risk", even with nothing else wrong.
+  // Other single warnings stay low: on established tokens they are normal for their type (a staking pool's
+  // program-controlled mint, a transfer hook...); measured on 62 real tokens, this rule moved 9 brand-new
+  // tokens from low to medium and no established one
+  if (lvl === "LOW" && lights.some(function (l) { return (l.items || []).some(function (x) { return x.code === "MKT_NEW"; }); })) lvl = "MEDIUM";
   return { lvl: lvl, sev: 3 * b + w + (na && !b && !w ? 1 : 0) };
 }
 

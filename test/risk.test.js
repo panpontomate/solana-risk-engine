@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, USDC, WSOL, FAMOUS } from "../src/index.js";
+import { tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, INFLATED_RATIO, USDC, WSOL, FAMOUS } from "../src/index.js";
 
 const DAY = 86400000;
 const NOW = Date.UTC(2026, 9, 1);
@@ -75,6 +75,20 @@ test("missing check caps the level at medium, and dataOnly detects it", () => {
   assert.equal(dataOnly({ lvl: lf.lvl, lights: lights }), true);
 });
 
+test("a market under 7 days is never low risk, other single warnings still are", () => {
+  // like MAYA or KURUMI in the real-token study: hours old, nothing else wrong
+  const i = info(), fresh = pair({ pairCreatedAt: NOW - 0.3 * DAY });
+  const lights = buildLights(i, goodConc, fresh, 0, "OPEN", null, NOW);
+  assert.deepEqual(lights.map((l) => l.s), ["ok", "ok", "warn", "ok"]);
+  assert.equal(levelFrom(lights).lvl, "MEDIUM");
+  assert.equal(levelFrom(buildLights(i, goodConc, pair({ pairCreatedAt: NOW - 8 * DAY }), 0, "OPEN", null, NOW)).lvl, "LOW");
+  // like mSOL, JitoSOL or RENDER: a program-controlled mint is normal for the type and stays low
+  const lst = info({ mintAuth: "P", authKind: { P: "program" } });
+  const l2 = buildLights(lst, goodConc, pair(), 0, "BRIDGED", null, NOW);
+  assert.equal(l2[3].s, "warn");
+  assert.equal(levelFrom(l2).lvl, "LOW");
+});
+
 test("RugCheck unlocked LP only counts on young, non-soft markets", () => {
   const i = info(), young = pair({ pairCreatedAt: NOW - 20 * DAY }), old = pair();
   let m = buildLights(i, goodConc, young, 0, "OPEN", { lpLockedPct: 5 }, NOW)[2];
@@ -118,6 +132,20 @@ test("realLiq exposes inflated pools", () => {
   const other = { quoteToken: { address: "Other111" }, priceNative: "1", priceUsd: "1", liquidity: { usd: 4e9, quote: 1 } };
   realLiq(other);
   assert.equal(other.liqRaw, undefined);
+});
+
+test("realLiq leaves lopsided concentrated-liquidity pools alone (5% threshold)", () => {
+  // JTO's main Orca Whirlpool as DexScreener reported it: $258k, of which only ~12% is SOL
+  const jto = { quoteToken: { address: WSOL }, priceNative: "0.004131", priceUsd: "0.4172", liquidity: { usd: 258439.3, quote: 157.4872 } };
+  realLiq(jto);
+  assert.equal(jto.liqRaw, undefined);
+  assert.equal(jto.liquidity.usd, 258439.3);
+  // the same pool with only 3% real side is flagged
+  const thin = { quoteToken: { address: USDC }, priceNative: "1", priceUsd: "1", liquidity: { usd: 100000, quote: 1500 } };
+  realLiq(thin);
+  assert.equal(thin.liqRaw, 100000);
+  assert.equal(thin.liquidity.usd, 3000);
+  assert.equal(INFLATED_RATIO, 0.05);
 });
 
 test("impostorOf catches copies of famous tokens", () => {
