@@ -1,4 +1,4 @@
-# solana-risk-engine (español)
+﻿# solana-risk-engine (español)
 
 Es el motor del Escáner de Wallets convertido en librería: análisis de riesgo explicable para tokens y wallets de Solana. No tiene dependencias, funciona en Node 18+ y en el navegador, y usa RPCs gratuitos si no se le da otro.
 
@@ -19,8 +19,8 @@ for (const l of r.lights) console.log(lightLabel(l.k, "es"), explainLight(l, "es
 ## Línea de comandos
 
 ```sh
-node examples/cli.js <token-o-wallet>
-node examples/cli.js holders <mint> --rpc "https://mainnet.helius-rpc.com/?api-key=..."
+npx solana-risk <token-o-wallet>
+npx solana-risk holders <mint> --rpc "https://mainnet.helius-rpc.com/?api-key=..."
 ```
 
 ## Tests

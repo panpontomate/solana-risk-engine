@@ -11,14 +11,15 @@
   "files": [
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "bin"
   ],
   "bin": {
-    "solana-risk": "./examples/cli.js"
+    "solana-risk": "bin/solana-risk.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
-    "example": "node examples/cli.js"
+    "example": "node bin/solana-risk.js"
   },
   "engines": {
     "node": ">=18"
