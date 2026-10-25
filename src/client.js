@@ -139,5 +139,5 @@ export function createClient(opts) {
     return rpcAt(vibeRpc, method, params, 6);   // more retries: its limit sometimes trips even when the queue is respected
   }
 
-  return { rpc: rpc, jfetch: jfetch, softJson: softJson, ownRpc: ownRpc, heliusKey: heliusKey, checkAbort: checkAbort, rpcUrl: rpcUrl };
+  return { rpc: rpc, jfetch: jfetch, softJson: softJson, ownRpc: ownRpc, heliusKey: heliusKey, checkAbort: checkAbort, rpcUrl: rpcUrl, retryDelayMs: opts.retryDelayMs };
 }

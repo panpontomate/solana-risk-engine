@@ -200,7 +200,7 @@ export async function assess(client, mint, pair, opts) {
     // In tokens with millions of holders (BONK) getTokenLargestAccounts sometimes times out: a second try usually works
     for (let tryC = 0; tryC < 2 && !conc; tryC++) {
       try { conc = await getConc(client, mint, info.supply); }
-      catch (e) { if (isCancel(e)) throw e; conc = null; if (!tryC) await sleep(opts.retryDelayMs === undefined ? 1500 : opts.retryDelayMs); }
+      catch (e) { if (isCancel(e)) throw e; conc = null; if (!tryC) await sleep(client.retryDelayMs === undefined ? 1500 : client.retryDelayMs); }
     }
   }
   const rc = await rcPromise;
