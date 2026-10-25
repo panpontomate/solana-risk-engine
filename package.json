@@ -1,0 +1,46 @@
+{
+  "name": "solana-risk-engine",
+  "version": "0.1.0",
+  "description": "Explainable risk analysis for Solana tokens and wallets: creator control, real holder concentration, inflated liquidity, impostor tokens, funder clusters and PnL. Zero dependencies, runs in Node and the browser.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./i18n": "./src/i18n/index.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "solana-risk": "./examples/cli.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "example": "node examples/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "solana",
+    "risk",
+    "rug-pull",
+    "scam-detection",
+    "token",
+    "spl-token",
+    "token-2022",
+    "holders",
+    "dexscreener",
+    "rugcheck"
+  ],
+  "license": "MIT",
+  "author": "panpontomate",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/panpontomate/solana-risk-engine.git"
+  },
+  "homepage": "https://github.com/panpontomate/solana-risk-engine#readme",
+  "bugs": "https://github.com/panpontomate/solana-risk-engine/issues"
+}

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>solana-risk-engine demo</title>
+<style>
+  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --line:#e7e5e4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --line:#44403c; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; max-width:720px; margin:0 auto; padding:24px 16px; }
+  input, button { font:inherit; padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:transparent; color:inherit; }
+  input { width:100%; box-sizing:border-box; margin-bottom:8px; }
+  .light { padding:8px 0; border-top:1px solid var(--line); }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<h1>Escáner de riesgo</h1>
+<p class="muted">Demo mínima de la librería. Sírvela con un servidor local (los módulos no cargan desde file://), por ejemplo: <code>npx serve .</code> en la carpeta del proyecto y abre /examples/browser.html</p>
+<input id="addr" placeholder="Dirección de un token o una wallet de Solana">
+<input id="rpc" placeholder="URL de RPC propia (opcional)">
+<button id="go">Analizar</button>
+<p id="status" class="muted"></p>
+<div id="out"></div>
+<script type="module">
+import { createScanner, explainLight, lightLabel, levelLabel, typeInfo, describe, describeStep, describeError } from "../src/index.js";
+const $ = (s) => document.querySelector(s);
+const ICON = { ok: "🟢", na: "⚪", warn: "🟡", bad: "🔴" };
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function tokenHtml(r) {
+  const t = typeInfo(r.type, "es");
+  let h = `<h2>${esc(r.sym)} — ${esc(levelLabel(r, "es"))}</h2>`;
+  if (t) h += `<p class="muted">${esc(t.label)}: ${esc(t.note)}</p>`;
+  if (r.lights) h += r.lights.map((l) => `<div class="light">${ICON[l.s]} <b>${esc(lightLabel(l.k, "es"))}</b>: ${esc(explainLight(l, "es"))}</div>`).join("");
+  else h += r.reasons.map((x) => `<div class="light">• ${esc(describe(x, "es"))}</div>`).join("");
+  return h;
+}
+
+$("#go").onclick = async () => {
+  const rpcUrl = $("#rpc").value.trim();
+  const scanner = createScanner({ rpcUrl });
+  $("#out").innerHTML = "";
+  $("#go").disabled = true;
+  try {
+    const r = await scanner.analyzeAddress($("#addr").value.trim(), { onProgress: (p, f) => { $("#status").textContent = Math.round(f * 100) + "% · " + describeStep(p, "es"); } });
+    $("#out").innerHTML = r.kind === "token" ? tokenHtml(r.token) : r.wallet.results.map(tokenHtml).join("");
+    $("#status").textContent = "";
+  } catch (e) {
+    $("#status").textContent = describeError(e, "es", { ownRpc: !!rpcUrl });
+  } finally {
+    $("#go").disabled = false;
+  }
+};
+</script>
+</body>
+</html>
