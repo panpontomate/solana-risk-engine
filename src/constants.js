@@ -6,6 +6,7 @@ export const PUBLIC_RPC = "https://solana-rpc.publicnode.com";
 export const VIBE_RPC = "https://public.rpc.solanavibestation.com";
 export const DEX = "https://api.dexscreener.com/tokens/v1/solana/";
 export const RUGCHECK = "https://api.rugcheck.xyz/v1/tokens/";
+export const GECKO = "https://api.geckoterminal.com/api/v2/networks/solana/";
 export const HELIUS_API = "https://api.helius.xyz/v0/addresses/";
 export const COINGECKO_SOL = "https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=365";
 

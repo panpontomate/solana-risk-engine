@@ -1,8 +1,8 @@
-import { ADDRESS_RE, KNOWN, LEVELS } from "./constants.js";
+import { ADDRESS_RE, KNOWN, LEVELS, PUMP_CURVE_DEXES } from "./constants.js";
 import { ScanError } from "./errors.js";
 import { pool, progress } from "./util.js";
 import { getTokens, isMint } from "./tokens.js";
-import { getMarkets } from "./markets.js";
+import { getMarkets, geckoLiquidity, geckoPair } from "./markets.js";
 import { assess } from "./risk.js";
 
 function checkAddress(addr) {
@@ -15,12 +15,20 @@ export function sortResults(list) {
   });
 }
 
-/** Risk of a single token. Throws IS_NFT for NFTs. */
+/**
+ * Risk of a single token. Throws IS_NFT for NFTs.
+ * @param [opts.noGecko]  do not fill DexScreener's Pump.fun gaps from GeckoTerminal (also for analyzeWallet)
+ */
 export async function analyzeToken(client, mint, opts) {
   opts = opts || {};
   checkAddress(mint);
   progress(opts.onProgress, "markets", 0.15);
   const mkr = await getMarkets(client, [mint]);
+  // Pump.fun gaps in DexScreener: not listed yet (seconds old) or $0 liquidity on the bonding curve
+  if (!opts.noGecko) {
+    if (!mkr.data[mint] && !mkr.failed.length) { const gp = await geckoPair(client, mint); if (gp) mkr.data[mint] = gp; }
+    await geckoLiquidity(client, mkr.data[mint]);
+  }
   progress(opts.onProgress, "token", 0.45);
   const r = await assess(client, mint, mkr.data[mint] || null, { marketUnknown: mkr.failed.length > 0, skipConcentration: opts.skipConcentration, skipCreator: opts.skipCreator });
   if (!r) throw new ScanError("IS_NFT", "that address is an NFT, not a token");
@@ -49,6 +57,12 @@ export async function analyzeWallet(client, wallet, opts) {
   const mkr = await getMarkets(client, mints, function (d, n) { progress(onProgress, "markets", 0.08 + 0.12 * d / n, { done: d, total: n }); });
   const mk = mkr.data, failedMk = {};
   mkr.failed.forEach(function (m) { failedMk[m] = 1; });
+  // Bonding-curve tokens show $0 liquidity on DexScreener; ask GeckoTerminal for a few (its free API
+  // allows ~30 requests a minute, and wallets full of airdropped spam would use them up)
+  if (!opts.noGecko) {
+    const curve = mints.filter(function (m) { const p = mk[m]; return p && PUMP_CURVE_DEXES.indexOf(p.dexId) >= 0 && !(p.liquidity && p.liquidity.usd); }).slice(0, 10);
+    await pool(curve, 2, async function (m) { await geckoLiquidity(client, mk[m]); });
+  }
 
   const out = [], todo = [];
   mints.forEach(function (m) {

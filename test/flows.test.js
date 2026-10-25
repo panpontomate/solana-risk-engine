@@ -165,6 +165,34 @@ test("assess: serial creator from RugCheck, only on markets under 7 days", async
   for (const x of [f, f2]) assert.ok(!x.calls.some((c) => /\/report$/.test(c.url)));
 });
 
+test("GeckoTerminal fills Pump.fun gaps: curve liquidity and tokens DexScreener does not list yet", async () => {
+  const w = riskWorld({}, { dexId: "pumpfun", liquidity: { usd: 0 }, pairCreatedAt: Date.now() - 0.1 * DAY });
+  const pa = w.pairs[0].pairAddress;
+  w.gecko = { pools: { [pa]: 2429 } };
+  const r = await scanner(w).analyzeToken(w.M);
+  assert.equal(r.pair.liquidity.usd, 2429);
+  assert.equal(r.lights[2].items[0].code, "MKT_LIQ_VERY_LOW");
+  assert.equal(r.lights[2].items[0].data.liq, 2429);
+  // noGecko keeps DexScreener's figure and asks nothing (a fresh world: the fake returns the same pair object)
+  const w2 = riskWorld({}, { dexId: "pumpfun", liquidity: { usd: 0 }, pairCreatedAt: Date.now() - 0.1 * DAY });
+  w2.gecko = w.gecko;
+  const f = fakeChain(w2);
+  const r0 = await createScanner({ rpcUrl: OWN, fetch: f, retryDelayMs: 0 }).analyzeToken(w2.M, { noGecko: true });
+  assert.equal(r0.pair.liquidity.usd, 0);
+  assert.ok(!f.calls.some((c) => /geckoterminal/.test(c.url)));
+
+  // not on DexScreener at all: the GeckoTerminal pool becomes the market
+  const n = riskWorld({}, null);
+  n.gecko = { tokens: { [n.M]: { data: [{ attributes: { address: "Pool1", base_token_price_usd: "0.00001", reserve_in_usd: "3100", volume_usd: { h24: "900" }, pool_created_at: new Date(Date.now() - 60000).toISOString() },
+    relationships: { dex: { data: { id: "pump-fun" } } } }], included: [{ attributes: { symbol: "NEW", name: "New token", image_url: "missing.png" } }] } } };
+  const g = await scanner(n).analyzeToken(n.M);
+  assert.equal(g.sym, "NEW");
+  assert.equal(g.pair.source, "geckoterminal");
+  assert.equal(g.pair.liquidity.usd, 3100);
+  assert.ok(g.reasons.some((x) => x.code === "MKT_NEW"));
+  assert.ok(!g.reasons.some((x) => x.code === "MKT_LP_UNLOCKED"));
+});
+
 test("recentLaunches counts Pump.fun creations paid by a wallet in the last 24 h", async () => {
   const W = addr("farm"), now = 1_800_000_000_000;
   const launch = (m) => ({ transaction: { message: { accountKeys: [{ pubkey: W, signer: true }, { pubkey: m, signer: true }, { pubkey: PUMP_PROGRAM }] } },

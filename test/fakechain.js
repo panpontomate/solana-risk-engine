@@ -1,7 +1,7 @@
 // An in-memory Solana + DexScreener + RugCheck + Helius + CoinGecko, answering through a fake fetch.
 // Describe the world declaratively and every engine function can run end to end against it.
 import { createHash } from "node:crypto";
-import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, RUGCHECK, HELIUS_API, COINGECKO_SOL } from "../src/constants.js";
+import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO } from "../src/constants.js";
 import { onCurve } from "../src/curve.js";
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -43,6 +43,7 @@ export function pda(label) {
  *   txs:     { [signature]: payer | full transaction object }
  *   pairs:   [ DexScreener pairs ]
  *   rugcheck:{ [mint]: { summary, report, graph } }
+ *   gecko:   { pools: { [poolAddress]: reserveUsd }, tokens: { [mint]: GeckoTerminal token-pools response } }
  *   swaps:   { [wallet]: [ Helius parsed txs ] }
  *   solPrices: [[ms, usd]]
  *   fail:    { dex: true | "network", rpc: { method: status } }
@@ -127,6 +128,14 @@ export function fakeChain(world) {
       const before = new URL(url).searchParams.get("before");
       const i = before ? list.findIndex((t) => t.signature === before) + 1 : 0;
       return list.slice(i, i + 100);
+    }
+    if (url.indexOf(GECKO) === 0) {
+      const g = w.gecko || {}, rest = url.slice(GECKO.length);
+      let m = /^pools\/([^/?]+)$/.exec(rest);
+      if (m) return g.pools && g.pools[m[1]] !== undefined ? { data: { attributes: { reserve_in_usd: String(g.pools[m[1]]) } } } : { __status: 404 };
+      m = /^tokens\/([^/?]+)\/pools/.exec(rest);
+      if (m) return g.tokens && g.tokens[m[1]] ? g.tokens[m[1]] : { data: [] };
+      return { __status: 404 };
     }
     if (url === COINGECKO_SOL) return w.solPrices ? { prices: w.solPrices } : { __status: 500 };
     return { __status: 404 };

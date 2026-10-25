@@ -1,4 +1,4 @@
-import { DEX, USDC, USDT, WSOL, FAMOUS } from "./constants.js";
+import { DEX, GECKO, USDC, USDT, WSOL, FAMOUS } from "./constants.js";
 import { ScanError, isCancel } from "./errors.js";
 import { sleep } from "./util.js";
 
@@ -55,4 +55,33 @@ export async function getMarkets(client, mints, onStep) {
     if (i + 30 < mints.length) await sleep(250);
   }
   return { data: best, failed: failed };
+}
+
+/* ---------- GeckoTerminal: fills two DexScreener gaps on Pump.fun ---------- */
+// Both are optional extras: on any failure the market stays exactly as DexScreener gave it.
+
+// DexScreener reports $0 liquidity for tokens still on Pump.fun's bonding curve. GeckoTerminal has the
+// real figure for the same pool (its pool address is DexScreener's pairAddress). Mutates the pair.
+export async function geckoLiquidity(client, pair) {
+  if (!pair || (pair.liquidity && pair.liquidity.usd) || !pair.pairAddress) return pair;
+  const j = await client.softJson(GECKO + "pools/" + pair.pairAddress, 6000);
+  const v = Number(j && j.data && j.data.attributes && j.data.attributes.reserve_in_usd) || 0;
+  if (v > 0) pair.liquidity = Object.assign({}, pair.liquidity, { usd: v });
+  return pair;
+}
+
+// A token seconds old is not on DexScreener yet but is on GeckoTerminal: its most liquid pool, shaped
+// like a DexScreener pair (what the engine reads: price, liquidity, volume, age, symbol), or null
+export async function geckoPair(client, mint) {
+  const j = await client.softJson(GECKO + "tokens/" + mint + "/pools?page=1&include=base_token", 6000);
+  const p = j && j.data && j.data[0];
+  if (!p || !p.attributes) return null;
+  const a = p.attributes, rel = p.relationships || {}, t = ((j.included || [])[0] || {}).attributes || {};
+  return {
+    pairAddress: a.address, dexId: (rel.dex && rel.dex.data && rel.dex.data.id) || "",
+    baseToken: { address: mint, symbol: t.symbol, name: t.name },
+    priceUsd: String(a.base_token_price_usd || 0), liquidity: { usd: Number(a.reserve_in_usd) || 0 },
+    volume: { h24: Number(a.volume_usd && a.volume_usd.h24) || 0 }, pairCreatedAt: Date.parse(a.pool_created_at) || 0,
+    info: { imageUrl: t.image_url && !/missing/.test(t.image_url) ? t.image_url : null }, source: "geckoterminal"
+  };
 }
