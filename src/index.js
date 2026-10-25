@@ -43,7 +43,7 @@ export { createClient };
 export { ScanError, isCancel } from "./errors.js";
 export * from "./constants.js";
 export { isOnCurve, onCurve, b58bytes } from "./curve.js";
-export { getTokens, getMint, getConc, getAuthKinds, isMint, accountKinds } from "./tokens.js";
+export { getTokens, getMint, getConc, getAuthKinds, isMint, accountKinds, kindOf } from "./tokens.js";
 export { getMarkets, realLiq, impostorOf } from "./markets.js";
 export { rugcheckSummary, rugcheckReport, rugcheckGraph, netBalances } from "./rugcheck.js";
 export { score, tokenType, buildLights, levelFrom, dataOnly, reasonsFrom, assess } from "./risk.js";

@@ -2,6 +2,7 @@
 // Describe the world declaratively and every engine function can run end to end against it.
 import { createHash } from "node:crypto";
 import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, RUGCHECK, HELIUS_API, COINGECKO_SOL } from "../src/constants.js";
+import { onCurve } from "../src/curve.js";
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -14,11 +15,22 @@ export function b58encode(bytes) {
   return s;
 }
 
-// Deterministic, valid-looking 32-byte address for a label (distinct labels never collide in practice)
+function keyFor(label, wantOnCurve) {
+  for (let i = 0; ; i++) {
+    const bytes = [...createHash("sha256").update(label + "#" + i).digest()];
+    if (!bytes[0]) continue;   // never a leading zero byte, so the encoding is 43-44 chars
+    if (onCurve(bytes) === wantOnCurve) return b58encode(bytes);
+  }
+}
+
+// Deterministic address for a label that is on the ed25519 curve, like any real wallet or keypair account
 export function addr(label) {
-  const bytes = [...createHash("sha256").update(label).digest()];
-  bytes[0] = bytes[0] || 7;   // never a leading zero byte, so the encoding is 43-44 chars
-  return b58encode(bytes);
+  return keyFor(label, true);
+}
+
+// Deterministic program-derived address (off the curve) for a label
+export function pda(label) {
+  return keyFor(label, false);
 }
 
 /**

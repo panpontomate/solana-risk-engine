@@ -4,7 +4,7 @@ import {
   createScanner, createClient, assess, getTokens, getConc, getAuthKinds, isMint, getMarkets, takeSnapshots, diffSnapshots,
   fetchSwaps, isOnCurve, USDC, WSOL, TOKEN_2022, SYSTEM_PROGRAM, FAMOUS
 } from "../src/index.js";
-import { fakeChain, addr, pairOf, sigsOver, b58encode } from "./fakechain.js";
+import { fakeChain, addr, pda, pairOf, sigsOver, b58encode } from "./fakechain.js";
 import { generateKeyPairSync } from "node:crypto";
 
 const OWN = "https://rpc.example.test/";
@@ -31,13 +31,33 @@ test("isMint: mints yes, wallets no, RPC failure counts as wallet", async () => 
 test("getAuthKinds: account owner decides, and the curve decides for keys with no account", async () => {
   const real = generateKeyPairSync("ed25519").publicKey.export({ format: "der", type: "spki" }).subarray(-32);
   const walletKey = b58encode([...real]);
-  let pda = null;
-  for (let i = 0; !pda; i++) { const k = addr("pda" + i); if (!isOnCurve(k)) pda = k; }
+  const noAccountPda = pda("authority");
+  assert.equal(isOnCurve(walletKey), true);
   const PROG = addr("prog"), PERSON = addr("person");
   const c = client({ owners: { [PROG]: AMM, [PERSON]: SYSTEM_PROGRAM } });
   assert.deepEqual(await getAuthKinds(c, { mintAuth: PROG, freezeAuth: PERSON }), { [PROG]: "program", [PERSON]: "wallet" });
-  assert.deepEqual(await getAuthKinds(c, { mintAuth: walletKey, freezeAuth: pda }), { [walletKey]: "wallet", [pda]: "program" });
+  assert.deepEqual(await getAuthKinds(c, { mintAuth: walletKey, freezeAuth: noAccountPda }), { [walletKey]: "wallet", [noAccountPda]: "program" });
   assert.deepEqual(await getAuthKinds(c, { mintAuth: null, freezeAuth: null }), {});
+});
+
+// Regression: JitoSOL's mint authority is a stake-pool PDA that holds SOL, so its account is owned
+// by the System Program like a wallet. It was reported as "the creator can mint more".
+test("a PDA owned by the System Program is still a program, not a person", async () => {
+  const STAKE_PDA = pda("stake-pool-withdraw"), M = addr("lst"), POOL_AUTH = pda("amm-authority"), P = addr("person");
+  const c = client({
+    owners: { [STAKE_PDA]: SYSTEM_PROGRAM, [POOL_AUTH]: SYSTEM_PROGRAM, [P]: SYSTEM_PROGRAM },
+    largest: { [M]: [{ address: addr("vault"), amount: 800, owner: POOL_AUTH }, { address: addr("pa"), amount: 100, owner: P }] }
+  });
+  assert.deepEqual(await getAuthKinds(c, { mintAuth: STAKE_PDA, freezeAuth: null }), { [STAKE_PDA]: "program" });
+  const conc = await getConc(c, M, 1000);
+  assert.equal(conc.w1, 10);        // the AMM authority's 80% is not a whale
+  assert.equal(conc.prog, 80);
+  const w = { mints: { [M]: { supply: 1000, decimals: 0, mintAuthority: STAKE_PDA } }, owners: { [STAKE_PDA]: SYSTEM_PROGRAM, [POOL_AUTH]: SYSTEM_PROGRAM, [P]: SYSTEM_PROGRAM },
+    largest: { [M]: [{ address: addr("vault"), amount: 800, owner: POOL_AUTH }, { address: addr("pa"), amount: 100, owner: P }] }, pairs: [pairOf(M)] };
+  const r = await scanner(w).analyzeToken(M);
+  assert.equal(r.type, "BRIDGED");
+  assert.equal(r.lights[0].s, "ok");
+  assert.equal(r.lvl, "LOW");
 });
 
 test("getConc counts people only, and falls back when owners are unknown", async () => {

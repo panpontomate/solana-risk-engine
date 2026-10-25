@@ -1,6 +1,6 @@
-import { RUGCHECK, SYSTEM_PROGRAM } from "./constants.js";
+import { RUGCHECK } from "./constants.js";
 import { isCancel } from "./errors.js";
-import { onCurve, b58bytes } from "./curve.js";
+import { kindOf } from "./tokens.js";
 import { pool } from "./util.js";
 
 // Extra signal from RugCheck.xyz (public API, no key): mainly the % of liquidity locked or burned,
@@ -42,7 +42,7 @@ export async function netBalances(client, mint, graph) {
     const part = addrs.slice(i, i + 100);
     try {
       const oa = await client.rpc("getMultipleAccounts", [part, { encoding: "base64", dataSlice: { offset: 0, length: 0 } }]);
-      part.forEach(function (a, k) { const v = oa.value[k]; kind[a] = v ? (v.owner === SYSTEM_PROGRAM ? "wallet" : "program") : (onCurve(b58bytes(a)) ? "wallet" : "program"); });
+      part.forEach(function (a, k) { kind[a] = kindOf(a, oa.value[k], true); });
     } catch (e) { if (isCancel(e)) throw e; }
   }
   await pool(addrs, 4, async function (a) {

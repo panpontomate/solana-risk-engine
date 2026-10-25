@@ -41,16 +41,21 @@ export async function getMint(client, mint) {
   };
 }
 
-// "wallet" or "program" for each address, from who owns its account (or the curve when it has none)
-export async function accountKinds(client, addrs, curveFallback) {
+// A key off the ed25519 curve has no private key: only a program can sign for it (a PDA), whoever
+// owns its account. PDAs that hold SOL (stake pool and AMM authorities) are owned by the System
+// Program like any wallet, so the owner alone would count them as people.
+export function kindOf(key, account, missingIsWallet) {
+  if (!onCurve(b58bytes(key))) return "program";
+  if (account) return account.owner === SYSTEM_PROGRAM ? "wallet" : "program";
+  return missingIsWallet ? "wallet" : "program";
+}
+
+// "wallet" or "program" for each address
+export async function accountKinds(client, addrs, missingIsWallet) {
   if (!addrs.length) return {};
   const r = await client.rpc("getMultipleAccounts", [addrs, { encoding: "base64", dataSlice: { offset: 0, length: 0 } }]);
   const out = {};
-  addrs.forEach(function (k, i) {
-    const v = r.value[i];
-    if (v) out[k] = v.owner === SYSTEM_PROGRAM ? "wallet" : "program";
-    else out[k] = curveFallback ? (onCurve(b58bytes(k)) ? "wallet" : "program") : "program";
-  });
+  addrs.forEach(function (k, i) { out[k] = kindOf(k, r.value[i], missingIsWallet); });
   return out;
 }
 
@@ -59,7 +64,7 @@ export async function getAuthKinds(client, info) {
   const keys = [];
   [info.mintAuth, info.freezeAuth].forEach(function (a) { if (a && keys.indexOf(a) < 0) keys.push(a); });
   if (!keys.length) return {};
-  return accountKinds(client, keys, true);   // no account: an empty wallet is on the curve, a PDA is not
+  return accountKinds(client, keys, true);   // no account but on the curve: an empty wallet
 }
 
 // Concentration of the supply. Each large account is traced to its owner: a pool or a program
