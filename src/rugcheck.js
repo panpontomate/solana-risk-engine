@@ -7,8 +7,22 @@ import { pool } from "./util.js";
 // which on-chain data does not show without decoding each DEX's binary layout (Raydium, Orca, Meteora
 // and pump.fun all differ). It is an extra, never a requirement: on failure these return null and the
 // rest of the analysis is exactly the same.
-export function rugcheckSummary(client, mint) {
-  return client.softJson(RUGCHECK + mint + "/report/summary", 6000);
+// RugCheck sometimes answers lpLockedPct 0 for a pool that is ~100% locked (5 of 40 calls on a
+// Raydium CPMM token, 2026-10-26; a watched token flipped high/medium every check). A low value is
+// therefore asked again up to twice and the highest answer wins: a pool that really is unlocked
+// reads low every time, so only the false alarm goes away.
+export const LP_RECHECK_BELOW = 60;
+export async function rugcheckSummary(client, mint) {
+  const url = RUGCHECK + mint + "/report/summary";
+  let best = await client.softJson(url, 6000);
+  for (let i = 0; i < 2 && lowLp(best); i++) {
+    const again = await client.softJson(url, 6000);
+    if (again && typeof again.lpLockedPct === "number" && again.lpLockedPct > best.lpLockedPct) best = again;
+  }
+  return best;
+}
+function lowLp(rc) {
+  return !!rc && typeof rc.lpLockedPct === "number" && rc.lpLockedPct < LP_RECHECK_BELOW;
 }
 
 // Full report (~700 KB, so ask once per holder search, never per token of a wallet): who created the

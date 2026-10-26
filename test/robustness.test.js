@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { generateKeyPairSync, createHash } from "node:crypto";
 import {
   createClient, createScanner, levelFrom, b58bytes, onCurve, isOnCurve, describe, describeError, describeStep, typeInfo,
-  levelLabel, lightLabel, LEVELS, TYPES, LIGHTS, SYSTEM_PROGRAM
+  levelLabel, lightLabel, LEVELS, TYPES, LIGHTS, SYSTEM_PROGRAM, rugcheckSummary
 } from "../src/index.js";
 import es from "../src/i18n/es.js";
 import en from "../src/i18n/en.js";
@@ -210,4 +210,17 @@ test("describe never fails on unknown codes or missing data", () => {
   assert.equal(describe({ code: "NOPE" }, "es"), "NOPE");
   assert.equal(describe({ code: "CON_OK", data: { w1: 1 } }, "es"), "Sin concentración preocupante (mayor wallet individual: 1%)");
   assert.equal(describe({ code: "MINT_ACTIVE" }, "en"), "The creator can still mint more tokens (mint authority active)");
+});
+
+test("rugcheckSummary asks again when RugCheck reads a locked pool as 0%, keeps a real low value", async () => {
+  const seq = (vals) => { let n = 0; return { calls: () => n, fetch: async () => ok({ lpLockedPct: vals[Math.min(n++, vals.length - 1)] }) }; };
+  let f = seq([0, 99.9]);
+  assert.equal((await rugcheckSummary(createClient({ fetch: f.fetch }), "m")).lpLockedPct, 99.9);
+  assert.equal(f.calls(), 2);
+  f = seq([0, 0, 0]);
+  assert.equal((await rugcheckSummary(createClient({ fetch: f.fetch }), "m")).lpLockedPct, 0);
+  assert.equal(f.calls(), 3);
+  f = seq([98]);
+  assert.equal((await rugcheckSummary(createClient({ fetch: f.fetch }), "m")).lpLockedPct, 98);
+  assert.equal(f.calls(), 1);
 });
