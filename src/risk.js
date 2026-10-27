@@ -16,6 +16,8 @@ function sig(code, s, data) {
 const DAY = 86400000;
 // Other tokens launched by the same creator in the last 24 h that make it a serial launcher
 export const SERIAL_WARN = 2, SERIAL_BAD = 5;
+// Creator track record: at least HISTORY_MIN older tokens and this share of them never took off
+export const HISTORY_MIN = 3, HISTORY_WARN = 0.8, HISTORY_BAD_MIN = 10, HISTORY_BAD = 0.9;
 
 /* ---------- old point score: only for tokens without a market, to spot spam ---------- */
 export function score(info) {
@@ -73,7 +75,7 @@ function mkLight(k, items, okSignal) {
  * @param value  USD value the analysed wallet holds (0 when checking a token alone)
  * @param type   tokenType(info, pair)
  * @param rc     RugCheck summary or null
- * @param launches  creatorLaunches result or null: other tokens the creator launched in the last 24 h
+ * @param launches  creatorLaunches result or null: what else the creator launched (last 24 h, and how older ones did)
  * @returns      [control, concentration, market, dependency]
  */
 export function buildLights(info, conc, pair, value, type, rc, now, launches) {
@@ -95,6 +97,11 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   // Launch farms put out a token every few minutes and drop each one as soon as buyers arrive: in a
   // 100-token Pump.fun sample one wallet launched 7 copies of "GMS" in 10 minutes
   if (launches && launches.day >= SERIAL_WARN) it.push(sig("CTL_SERIAL_CREATOR", launches.day >= SERIAL_BAD ? "bad" : "warn", { n: launches.day, creator: launches.creator }));
+  // Older launches that went nowhere: farms that spread their tokens over days escape the 24 h count
+  if (launches && launches.old >= HISTORY_MIN && launches.dead / launches.old >= HISTORY_WARN) {
+    const bad = launches.old >= HISTORY_BAD_MIN && launches.dead / launches.old >= HISTORY_BAD;
+    it.push(sig("CTL_CREATOR_HISTORY", bad ? "bad" : "warn", { old: launches.old, dead: launches.dead, best: launches.best, creator: launches.creator }));
+  }
   const control = mkLight("control", it, sig((info && (info.mintAuth || info.freezeAuth)) ? "CTL_ONLY_PROGRAMS" : "CTL_NONE", "ok"));
 
   // 2) concentration in people (pools and programs do not count)

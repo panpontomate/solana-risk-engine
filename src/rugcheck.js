@@ -32,16 +32,27 @@ export function rugcheckReport(client, mint) {
   return client.softJson(RUGCHECK + mint + "/report", 10000);
 }
 
-// How many other tokens the creator launched in the last 24 h. Only for new tokens: their full report
+// A creator token older than a day still under this market cap never took off: a Pump.fun token
+// starts at ~28 SOL (~$2,800 at $100/SOL). In a 43-token farm (2026-10-27) all sat at $2,800-4,400
+export const CREATOR_DEAD_MCAP = 10000;
+
+// What else the creator launched: how many in the last 24 h and, of the older ones RugCheck has a
+// market cap for, how many stayed under CREATOR_DEAD_MCAP. Only for new tokens: their full report
 // is ~10 KB (the 700 KB ones are old tokens with many markets and holders).
-// @returns {creator, day, total} or null when RugCheck does not answer or does not know the creator
+// @returns {creator, day, total, old, dead, best} or null when RugCheck does not answer or does not know the creator
 export async function creatorLaunches(client, mint, now) {
   const rc = await rugcheckReport(client, mint);
   if (!rc || !rc.creator) return null;
   now = now || Date.now();
   const others = (rc.creatorTokens || []).filter(function (t) { return t && t.mint !== mint; });
   const day = others.filter(function (t) { const at = Date.parse(t.createdAt); return at && now - at < 86400000; }).length;
-  return { creator: rc.creator, day: day, total: others.length };
+  const old = others.filter(function (t) {
+    const at = Date.parse(t.createdAt);
+    return at && now - at >= 86400000 && typeof t.marketCap === "number" && isFinite(t.marketCap);
+  });
+  const dead = old.filter(function (t) { return t.marketCap < CREATOR_DEAD_MCAP; }).length;
+  const best = old.reduce(function (m, t) { return Math.max(m, t.marketCap); }, 0);
+  return { creator: rc.creator, day: day, total: others.length, old: old.length, dead: dead, best: old.length ? best : null };
 }
 
 // The report only gives each network's size; this endpoint gives its wallets and holdings

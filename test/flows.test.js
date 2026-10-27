@@ -156,7 +156,7 @@ test("assess: serial creator from RugCheck, only on markets under 7 days", async
   const r = await scanner(w).analyzeToken(w.M);
   const s = r.lights[0].items.find((x) => x.code === "CTL_SERIAL_CREATOR");
   assert.deepEqual(s, { code: "CTL_SERIAL_CREATOR", s: "bad", data: { n: 5, creator: "Creator1" } });
-  assert.deepEqual(r.creator, { creator: "Creator1", day: 5, total: 6 });
+  assert.deepEqual(r.creator, { creator: "Creator1", day: 5, total: 6, old: 0, dead: 0, best: null });
   // skipCreator, or an old market: RugCheck's full report is not even asked for
   const f = fakeChain(w);
   await createScanner({ rpcUrl: OWN, fetch: f, retryDelayMs: 0 }).analyzeToken(w.M, { skipCreator: true });
@@ -446,4 +446,16 @@ test("fetchSwaps pages through history up to the limit", async () => {
   assert.equal(f.calls.length, 3);
   assert.equal((await fetchSwaps(c, W, 100)).length, 100);
   assert.ok(f.calls.every((x) => x.url.includes("api-key=k")));
+});
+
+test("creator track record: older launches that never took off", async () => {
+  const w = riskWorld({}, { pairCreatedAt: Date.now() - 2 * DAY });
+  const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
+  const toks = [{ mint: w.M, createdAt: ago(1), marketCap: 3000 }, { mint: "N", createdAt: ago(2), marketCap: 3000 }, { mint: "X", createdAt: ago(40) }];
+  for (let i = 0; i < 11; i++) toks.push({ mint: "O" + i, createdAt: ago(30 + i * 24), marketCap: i === 0 ? 85000 : 2900 + i });
+  w.rugcheck = { [w.M]: { report: { creator: "Farm1", creatorTokens: toks } } };
+  const r = await scanner(w).analyzeToken(w.M);
+  assert.deepEqual(r.creator, { creator: "Farm1", day: 1, total: 13, old: 11, dead: 10, best: 85000 });
+  const s = r.lights[0].items.find((x) => x.code === "CTL_CREATOR_HISTORY");
+  assert.deepEqual(s, { code: "CTL_CREATOR_HISTORY", s: "bad", data: { old: 11, dead: 10, best: 85000, creator: "Farm1" } });
 });

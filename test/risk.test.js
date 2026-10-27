@@ -180,3 +180,15 @@ test("impostorOf catches copies of famous tokens", () => {
   assert.equal(impostorOf(FAMOUS.WBTC, { baseToken: { symbol: "WBTC" } }), null);
   assert.equal(impostorOf("Fake111", { baseToken: { symbol: "cbBTC" } }), null);
 });
+
+test("creator track record thresholds", () => {
+  const i = info({}), p = pair({ pairCreatedAt: NOW - 2 * 86400000 });
+  const h = (old, dead) => buildLights(i, goodConc, p, 0, "OPEN", null, NOW, { creator: "C", day: 0, total: old, old: old, dead: dead, best: 5000 })[0]
+    .items.find((x) => x.code === "CTL_CREATOR_HISTORY");
+  assert.equal(h(2, 2), undefined);          // too few to judge
+  assert.equal(h(5, 3), undefined);          // 60%: some took off
+  assert.equal(h(5, 4).s, "warn");           // 80%
+  assert.equal(h(9, 9).s, "warn");           // all dead but under 10 launches
+  assert.equal(h(20, 18).s, "bad");          // 90% of 20
+  assert.equal(buildLights(i, goodConc, p, 0, "OPEN", null, NOW, null)[0].items.some((x) => x.code === "CTL_CREATOR_HISTORY"), false);
+});

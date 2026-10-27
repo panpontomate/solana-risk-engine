@@ -40,6 +40,7 @@ export default {
     CTL_ONLY_PROGRAMS: () => "Solo hay autoridades controladas por un programa (ver dependencia)",
     CTL_NONE: () => "Sin autoridades activas: nadie puede crear más ni congelar",
     CTL_SERIAL_CREATOR: (d) => "El creador ha lanzado " + d.n + " tokens más en las últimas 24 h (según RugCheck): es un lanzador en serie, que suele abandonar cada token en cuanto llegan compradores",
+    CTL_CREATOR_HISTORY: (d) => "De los " + d.old + " tokens que el creador lanzó antes (hace más de 24 h), " + d.dead + " se quedaron por debajo de 10.000 $ de capitalización (según RugCheck): sus lanzamientos no suelen despegar",
     IMPOSTOR: (d) => "Se hace pasar por " + d.symbol + ": el " + d.symbol + " de verdad tiene otra dirección (" + short(d.real) + "). Es una copia, casi seguro una estafa",
 
     CON_SKIPPED: () => "Sin comprobar la concentración de holders",

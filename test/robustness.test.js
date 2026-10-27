@@ -170,7 +170,7 @@ test("Spanish and English have exactly the same keys", () => {
 });
 
 const SAMPLE = { byWallet: true, ext: "transferHook", symbol: "BONK", real: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", w1: 12.3, w10: 45.6, prog: 30, top1: 50, top10: 70,
-  reported: 4e9, real_: 2, liq: 12345, vol: 0.004, days: 3, pct: 7.5, n: 1, total: 4, filter: "win", message: "boom" };
+  reported: 4e9, real_: 2, liq: 12345, vol: 0.004, days: 3, pct: 7.5, n: 1, total: 4, filter: "win", message: "boom", old: 12, dead: 11 };
 
 test("every text renders without throwing, placeholders or 'undefined'", () => {
   for (const L of [es, en]) {
