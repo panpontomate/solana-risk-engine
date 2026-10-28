@@ -48,7 +48,8 @@ export async function getMint(client, mint) {
     // transfer fee in basis points (the higher of the current and the scheduled one); null when not set
     feeBps: feeBps(state("transferFeeConfig")),
     // every key that controls something in the extensions (delegate, hook, pause, metadata...)
-    extKeys: extKeys(exts)
+    extKeys: extKeys(exts),
+    program: r.value.owner || null
   };
 }
 

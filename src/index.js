@@ -6,6 +6,7 @@ import { takeSnapshots } from "./changes.js";
 import { confluence, commonHolders } from "./confluence.js";
 import { getTokens } from "./tokens.js";
 import { loadWalletBase } from "./base.js";
+import { connectionMap } from "./map.js";
 
 /**
  * The easy entry point: one object with every high-level analysis bound to one network client.
@@ -24,6 +25,7 @@ export function createScanner(opts) {
     analyzeWallet: (wallet, o) => analyzeWallet(client, wallet, o),
     analyzeAddress: (addr, o) => analyzeAddress(client, addr, o),
     analyzeHolders: (mint, o) => analyzeHolders(client, mint, o),
+    connectionMap: (mint, o) => connectionMap(client, mint, o),
     estimatePnl: async (wallets, o) => {
       // Current balances trim tokens the wallet moved away; read them if the caller did not pass them
       o = o || {};
@@ -53,6 +55,8 @@ export { recentLaunches, chainLaunches } from "./launch.js";
 export { analyzeToken, analyzeWallet, analyzeAddress, sortResults } from "./wallet.js";
 export { holderBase, markBusy, onlyReceives, PASSIVE_SAMPLE, findFunder, findFunders, clusterByFunder, holderRows, creatorInfo, analyzeHolders,
   perHour, sourceRates, groupList, EXCHANGE_PER_HOUR, YOUNG_DAYS, HOLD_GROUP_YOUNG, HOLD_GROUP_MATURE } from "./holders.js";
+export { connectionMap, allHolders, transferNetworks, topHub, mapGroups, mapSignals, walletType,
+  BOT_PER_HOUR, MAP_GROUP_YOUNG, MAP_GROUP_MATURE, MAP_HUB, MAP_WHALE, MAP_MAX_FREE, MAP_MAX_OWN } from "./map.js";
 export { fetchSwaps, solHistory, priceSeries, parseTrades, pnlFromTrades, pnlStatus, estimatePnl } from "./pnl.js";
 export { capSnap, chgDiff, chgAgg, takeSnapshots, diffSnapshots } from "./changes.js";
 export { confluence, commonHolders } from "./confluence.js";

@@ -2,7 +2,7 @@
 // Describe the world declaratively and every engine function can run end to end against it.
 import { createHash } from "node:crypto";
 import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, DEX_SEARCH, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO, WALLET_BASE_URL } from "../src/constants.js";
-import { onCurve } from "../src/curve.js";
+import { onCurve, b58bytes } from "../src/curve.js";
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -38,6 +38,7 @@ export function pda(label) {
  *   mints:   { [mint]: { mintAuthority, freezeAuthority, supply, decimals, extensions: [names or {extension, state}], program } },
  *   search:  [pairs]                                          DexScreener search results (same name and ticker)
  *   largest: { [mint]: [{ address, amount, owner }] }       token accounts (owner = who owns the token account)
+ *   allAccounts: { [mint]: [{ address, amount, owner }] }   every token account (getProgramAccounts); defaults to largest
  *   owners:  { [address]: programId }                       who owns each account (SYSTEM_PROGRAM = wallet)
  *   wallets: { [wallet]: { sol, tokens: { [mint]: uiAmount } } }
  *   sigs:    { [address]: [{ signature, blockTime }] }      newest first
@@ -74,6 +75,17 @@ export function fakeChain(world) {
           const o = w.owners[a] || (w.wallets[a] ? SYSTEM_PROGRAM : null);
           return o ? { owner: o } : null;
         }) };
+      case "getProgramAccounts": {
+        // every token account of a mint, as the owner (32 bytes) + amount (u64) slice the engine asks for
+        const mc = ((p[1] && p[1].filters) || []).find((x) => x.memcmp), mint = mc && mc.memcmp.bytes;
+        const list = (w.allAccounts && w.allAccounts[mint]) || w.largest[mint] || [];
+        return list.map((a) => {
+          const buf = Buffer.alloc(40);
+          Buffer.from(b58bytes(a.owner)).copy(buf, 0);
+          buf.writeBigUInt64LE(BigInt(a.amount), 32);
+          return { pubkey: a.address, account: { data: [buf.toString("base64"), "base64"] } };
+        });
+      }
       case "getTokenLargestAccounts":
         return { value: (w.largest[p[0]] || []).map((a) => ({ address: a.address, amount: String(a.amount) })) };
       case "getBalance":
