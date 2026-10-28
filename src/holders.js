@@ -64,7 +64,13 @@ export async function findFunder(client, addr) {
     }
     if (!reachedEnd || !sigs || !sigs.length) return null;
     const earliest = sigs[sigs.length - 1].signature;
-    const tx = await client.rpc("getTransaction", [earliest, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed" }]);
+    // version 1 is needed for recent transactions; an older RPC that does not know it yet gets 0
+    let tx;
+    try { tx = await client.rpc("getTransaction", [earliest, { maxSupportedTransactionVersion: 1, encoding: "jsonParsed" }]); }
+    catch (e) {
+      if (isCancel(e) || !/version|invalid param/i.test(e.message || "")) throw e;
+      tx = await client.rpc("getTransaction", [earliest, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed" }]);
+    }
     const keys = tx && tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys;
     if (!keys || !keys.length) return null;
     const payer = keys[0] && (keys[0].pubkey !== undefined ? keys[0].pubkey : keys[0]);

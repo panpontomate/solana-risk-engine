@@ -130,6 +130,8 @@ test("findFunder walks up to 3 pages of signatures and gives up on very active w
   assert.equal(await findFunder(c, C), null);      // paid for itself
   assert.equal(await findFunder(c, D), null);      // no history
   assert.equal(f.calls.filter((x) => x.method === "getSignaturesForAddress" && x.params[0] === A).length, 3);
+  // recent wallets start with version 1 transactions: asking with 0 made every one of them come back empty
+  assert.ok(f.calls.filter((x) => x.method === "getTransaction").every((x) => x.params[1].maxSupportedTransactionVersion === 1));
 });
 
 test("markBusy only flags 200 signatures within 2 days", async () => {
