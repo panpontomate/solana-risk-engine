@@ -129,7 +129,21 @@ export function createClient(opts) {
       return { context: rs[0].context, value: [].concat.apply([], rs.map(function (r) { return r.value; })) };
     }
     if (!blocked[method]) {
-      try { return await rpcAt(publicRpc, method, params); }
+      try {
+        const res = await rpcAt(publicRpc, method, params);
+        // PublicNode only keeps a few days of history: a list that ends before filling the page, or a
+        // transaction it cannot find, may just be old. Vibe Station keeps it all, so it gets the last word
+        if (method === "getSignaturesForAddress" && Array.isArray(res) && res.length < ((params[1] && params[1].limit) || 1000)) {
+          await vibeSlot();
+          const full = await rpcAt(vibeRpc, method, params, 6).catch(function (e) { if (isCancel(e)) throw e; return null; });
+          return Array.isArray(full) && full.length > res.length ? full : res;
+        }
+        if (method === "getTransaction" && res === null) {
+          await vibeSlot();
+          return await rpcAt(vibeRpc, method, params, 6).catch(function (e) { if (isCancel(e)) throw e; return null; });
+        }
+        return res;
+      }
       catch (e) {
         if (isCancel(e) || !(e.code === "HTTP" && (e.data.status === 401 || e.data.status === 403))) throw e;
         blocked[method] = 1;

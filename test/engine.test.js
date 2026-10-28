@@ -94,6 +94,25 @@ test("free mode: blocked methods go to Vibe Station, big getMultipleAccounts is 
   assert.deepEqual(pn.map((x) => x.params[0].length), [10, 10, 5]);
 });
 
+test("free mode: history PublicNode no longer keeps is read from Vibe Station", async () => {
+  const OLD = [{ signature: "s2", blockTime: 2 }, { signature: "s1", blockTime: 1 }];
+  const f = mockFetch({ rpc: {
+    getSignaturesForAddress: (p, url) => url === PUBLIC_RPC ? [] : OLD,
+    getTransaction: (p, url) => url === PUBLIC_RPC ? null : { transaction: { message: { accountKeys: [{ pubkey: "FUNDER" }] } } }
+  } });
+  const c = createClient({ fetch: f, vibeIntervalMs: 0, retryDelayMs: 0 });
+  assert.deepEqual(await c.rpc("getSignaturesForAddress", ["W", { limit: 1000 }]), OLD);
+  const tx = await c.rpc("getTransaction", ["s1", {}]);
+  assert.equal(tx.transaction.message.accountKeys[0].pubkey, "FUNDER");
+  assert.deepEqual(f.calls.map((x) => x.url), [PUBLIC_RPC, VIBE_RPC, PUBLIC_RPC, VIBE_RPC]);
+  // a full page from PublicNode is trusted as it is
+  const full = Array.from({ length: 5 }, (_, i) => ({ signature: "x" + i }));
+  const g = mockFetch({ rpc: { getSignaturesForAddress: () => full } });
+  const c2 = createClient({ fetch: g, vibeIntervalMs: 0, retryDelayMs: 0 });
+  assert.equal((await c2.rpc("getSignaturesForAddress", ["W", { limit: 5 }])).length, 5);
+  assert.deepEqual(g.calls.map((x) => x.url), [PUBLIC_RPC]);
+});
+
 test("free mode: a method PublicNode rejects with 403 is retried on Vibe and remembered", async () => {
   const f = mockFetch({ rpc: { getSignaturesForAddress: (p, url) => url === PUBLIC_RPC ? { __status: 403 } : [] } });
   const c = createClient({ fetch: f, vibeIntervalMs: 0, retryDelayMs: 0 });
