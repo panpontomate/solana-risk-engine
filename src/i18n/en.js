@@ -37,6 +37,7 @@ export default {
     CTL_ONLY_PROGRAMS: () => "Only program-controlled authorities (see dependency)",
     CTL_NONE: () => "No active authorities: nobody can mint more or freeze",
     CTL_SERIAL_CREATOR: (d) => "The creator launched " + d.n + " other tokens in the last 24 h (per RugCheck): a serial launcher, who usually drops each token as soon as buyers arrive",
+    HOLD_GROUP: (d) => d.n + " holders got their first SOL from the same wallet and together hold " + pct(d.pct) + " of the supply: most likely one person or team",
     CTL_CREATOR_HISTORY: (d) => "Of the " + d.old + " tokens the creator launched before (over 24 h ago), " + d.dead + " stayed under $10,000 market cap (per RugCheck): their launches rarely take off",
     IMPOSTOR: (d) => "Impersonates " + d.symbol + ": the real " + d.symbol + " has another address (" + short(d.real) + "). It is a copy, almost certainly a scam",
 

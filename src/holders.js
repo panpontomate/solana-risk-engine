@@ -89,6 +89,44 @@ export async function findFunders(client, wallets, onStep) {
   return out;
 }
 
+// Exchanges and launch platforms move thousands of transactions an hour; the busiest farms and
+// distributors seen in the 28/10 study did 1-150. Above this, a wallet is infrastructure, not a person.
+export const EXCHANGE_PER_HOUR = 350;
+// Young tokens (under 14 days) are read for the team's split, mature ones for what stayed hidden
+export const YOUNG_DAYS = 14;
+// A group (holders sharing the source of their first SOL) over this % of the supply warns
+export const HOLD_GROUP_YOUNG = 10, HOLD_GROUP_MATURE = 15;
+
+// Transactions per hour over a page of signatures (newest first)
+export function perHour(sigs) {
+  if (!sigs || sigs.length < 2) return 0;
+  const span = ((sigs[0].blockTime || 0) - (sigs[sigs.length - 1].blockTime || 0)) / 3600;
+  return span > 0 ? sigs.length / span : sigs.length * 3600;
+}
+
+// Rate of each source wallet (one request each)
+export async function sourceRates(client, addrs, onStep) {
+  const out = {};
+  let done = 0;
+  await pool(addrs, 3, async function (a) {
+    try { out[a] = perHour(await client.rpc("getSignaturesForAddress", [a, { limit: 1000 }])); }
+    catch (e) { if (isCancel(e)) throw e; out[a] = null; }
+    done++; if (onStep) onStep(done, addrs.length);
+  });
+  return out;
+}
+
+// Groups by size of their share of the supply, biggest first: [{id, funder, members, pct}]
+export function groupList(clusters, rows) {
+  const by = {};
+  rows.forEach(function (r) {
+    const c = clusters[r.owner]; if (!c) return;
+    const g = by[c.id] || (by[c.id] = { id: c.id, funder: c.funder, members: [], pct: 0 });
+    g.members.push(r.owner); g.pct += r.pct;
+  });
+  return Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.pct - a.pct; });
+}
+
 // An exchange pays the withdrawals of thousands of customers from the same wallet: if that is the
 // source, the "group" joins strangers. So sources that pass the same very-active test used to separate
 // bots are ignored (hot = markBusy result over the sources).
@@ -159,7 +197,14 @@ export async function creatorInfo(client, mint, onProgress) {
  * Whale finder: top holders, with bots/exchanges separated from people, people grouped by who funded
  * them, and the creator's history. Works best with your own RPC (it needs getTokenLargestAccounts).
  *
+ * Young tokens (under 14 days: market age from DexScreener, else RugCheck's detectedAt) also trace the
+ * busy wallets: on day one most big holders trade a lot and the team's split hides among them. A group
+ * over 10% of the supply in a young token (bad) or 15% in a mature one (warn) is a HOLD_GROUP signal.
+ *
  * @param [opts.creator=true]  also look up the creator and insider networks on RugCheck
+ * @param [opts.createdAt]     ms when its market started, if the caller knows it
+ * @param [opts.now]
+ * @returns {..., mode: "young"|"mature", ageDays, groups, signals}
  */
 export async function analyzeHolders(client, mint, opts) {
   opts = opts || {};
@@ -169,18 +214,36 @@ export async function analyzeHolders(client, mint, opts) {
   const wal = b.uniq.filter(function (o) { return b.kind[o] === "wallet"; });
   const busy = await markBusy(client, b.kind, wal, function (c, n) { progress(onProgress, "bots", 0.65 + 0.15 * c / Math.max(1, n), { done: c, total: n }); });
   const hr = holderRows(b, busy), pair = b.pair;
-  const people = hr.rows.filter(function (r) { return r.kind === "wallet"; }).map(function (r) { return r.owner; });
+  const now = opts.now || Date.now();
+  let created = opts.createdAt || (pair && pair.pairCreatedAt) || null;
+  if (!created) {
+    const rc = await rugcheckReport(client, mint);
+    if (rc && rc.detectedAt) created = Date.parse(rc.detectedAt) || null;
+  }
+  const ageDays = created ? Math.max(0, (now - created) / 86400000) : null;
+  const mode = ageDays !== null && ageDays < YOUNG_DAYS ? "young" : "mature";
+  // who is traced: people always; in young tokens also the busy wallets
+  const traced = hr.rows.filter(function (r) { return r.kind === "wallet" || (mode === "young" && r.kind === "active"); })
+    .map(function (r) { return r.owner; });
   let clusters = {}, hotGroups = 0;
-  if (people.length >= 2) {
-    const funders = await findFunders(client, people, function (c, n) { progress(onProgress, "funders", 0.8 + 0.08 * c / Math.max(1, n), { done: c, total: n }); });
+  if (traced.length >= 2) {
+    const funders = await findFunders(client, traced, function (c, n) { progress(onProgress, "funders", 0.8 + 0.08 * c / Math.max(1, n), { done: c, total: n }); });
     clusters = clusterByFunder(funders);
     const srcs = uniq(Object.keys(clusters).map(function (a) { return clusters[a].funder; }));
     if (srcs.length) {
-      const hot = await markBusy(client, {}, srcs, function (c, n) { progress(onProgress, "exchangeSources", 0.88 + 0.02 * c / Math.max(1, n), { done: c, total: n }); });
+      // a source is an exchange when it moves more than EXCHANGE_PER_HOUR transactions an hour (the bot
+      // test, 200 in 2 days, also caught distributors doing ~50 an hour and hid their groups)
+      const rates = await sourceRates(client, srcs, function (c, n) { progress(onProgress, "exchangeSources", 0.88 + 0.02 * c / Math.max(1, n), { done: c, total: n }); });
+      const hot = {};
+      srcs.forEach(function (f) { if (rates[f] > EXCHANGE_PER_HOUR) hot[f] = true; });
       hotGroups = srcs.filter(function (f) { return hot[f]; }).length;
       if (hotGroups) clusters = clusterByFunder(funders, hot);
     }
   }
+  const groups = groupList(clusters, hr.rows), signals = [];
+  const limit = mode === "young" ? HOLD_GROUP_YOUNG : HOLD_GROUP_MATURE;
+  if (groups[0] && groups[0].pct > limit)
+    signals.push({ code: "HOLD_GROUP", s: mode === "young" ? "bad" : "warn", data: { n: groups[0].members.length, pct: groups[0].pct, id: groups[0].id, funder: groups[0].funder } });
   let creator = null;
   if (opts.creator !== false) {
     progress(onProgress, "creator", 0.9);
@@ -190,6 +253,7 @@ export async function analyzeHolders(client, mint, opts) {
   return {
     mint: mint, sym: (pair && pair.baseToken && pair.baseToken.symbol) || short(mint),
     name: (pair && pair.baseToken && pair.baseToken.name) || "", price: hr.price, rows: hr.rows,
-    mintAuth: !!b.info.mintAuth, freezeAuth: !!b.info.freezeAuth, clusters: clusters, hotGroups: hotGroups, creator: creator
+    mintAuth: !!b.info.mintAuth, freezeAuth: !!b.info.freezeAuth, clusters: clusters, hotGroups: hotGroups, creator: creator,
+    mode: mode, ageDays: ageDays, groups: groups, signals: signals
   };
 }

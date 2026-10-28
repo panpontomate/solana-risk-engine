@@ -34,7 +34,7 @@ function world() {
     sigs: {
       [P1]: few("p1"), [P2]: few("p2"), [P3]: few("p3"), [P4]: few("p4"),
       [BOT]: sigsOver("bot", 200, 86400),        // 200 transactions in one day: a bot
-      [EXCH]: sigsOver("ex", 200, 3600),         // the exchange hot wallet is even busier
+      [EXCH]: sigsOver("ex", 1000, 3600),        // the exchange hot wallet: 1000 an hour
       [FUNDER]: few("f")
     },
     txs: { "p1-first": FUNDER, "p2-first": FUNDER, "p3-first": EXCH, "p4-first": EXCH },
