@@ -5,6 +5,7 @@
 export const PUBLIC_RPC = "https://solana-rpc.publicnode.com";
 export const VIBE_RPC = "https://public.rpc.solanavibestation.com";
 export const DEX = "https://api.dexscreener.com/tokens/v1/solana/";
+export const DEX_SEARCH = "https://api.dexscreener.com/latest/dex/search?q=";
 export const RUGCHECK = "https://api.rugcheck.xyz/v1/tokens/";
 export const GECKO = "https://api.geckoterminal.com/api/v2/networks/solana/";
 export const HELIUS_API = "https://api.helius.xyz/v0/addresses/";
@@ -42,6 +43,21 @@ export const FAMOUS = {
   // Bitcoin and Ether only exist on Solana bridged: a Pump.fun token called "BTC" is never the real one
   BTC: "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh", WBTC: "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
   ETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs", WETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs"
+};
+
+// Real companies with no token of their own on Solana: a memecoin called "Spotify" is not Spotify. Their
+// genuine tokenized shares come from an issuer (xStocks, Backpack...) and are typed TOKENIZED, so they
+// are never matched. Names only, lower case: stock tickers clash with real crypto symbols (META, COIN...)
+export const BRANDS = {
+  spotify: "Spotify", shopify: "Shopify", tesla: "Tesla", apple: "Apple", nvidia: "Nvidia", amazon: "Amazon",
+  google: "Google", alphabet: "Alphabet", microsoft: "Microsoft", facebook: "Facebook", instagram: "Instagram",
+  whatsapp: "WhatsApp", netflix: "Netflix", coinbase: "Coinbase", robinhood: "Robinhood", gamestop: "GameStop",
+  microstrategy: "MicroStrategy", paypal: "PayPal", visa: "Visa", mastercard: "Mastercard", nike: "Nike",
+  disney: "Disney", starbucks: "Starbucks", mcdonalds: "McDonald's", walmart: "Walmart", uber: "Uber",
+  airbnb: "Airbnb", tiktok: "TikTok", youtube: "YouTube", openai: "OpenAI", chatgpt: "ChatGPT", blackrock: "BlackRock",
+  jpmorgan: "JPMorgan", samsung: "Samsung", sony: "Sony", nintendo: "Nintendo", playstation: "PlayStation",
+  ferrari: "Ferrari", lamborghini: "Lamborghini", "red bull": "Red Bull", "coca cola": "Coca-Cola", pepsi: "Pepsi",
+  adidas: "Adidas", gucci: "Gucci", louis_vuitton: "Louis Vuitton", rolex: "Rolex", spacex: "SpaceX", neuralink: "Neuralink"
 };
 
 // Token-2022 extensions that add risk, with the points they add to the no-market spam score

@@ -89,9 +89,10 @@ export async function findFunders(client, wallets, onStep) {
   return out;
 }
 
-// Exchanges and launch platforms move thousands of transactions an hour; the busiest farms and
-// distributors seen in the 28/10 study did 1-150. Above this, a wallet is infrastructure, not a person.
-export const EXCHANGE_PER_HOUR = 350;
+// Exchanges and launch platforms move hundreds or thousands of transactions an hour. In the 28/10 study of
+// 200 tokens the sources of real groups did 0-50 an hour; sources between 163 and 347 an hour funded
+// holders of several unrelated tokens (Fartcoin, USELESS...): small exchanges. Above this, infrastructure.
+export const EXCHANGE_PER_HOUR = 100;
 // Young tokens (under 14 days) are read for the team's split, mature ones for what stayed hidden
 export const YOUNG_DAYS = 14;
 // A group (holders sharing the source of their first SOL) over this % of the supply warns

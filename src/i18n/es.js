@@ -40,6 +40,9 @@ export default {
     CTL_ONLY_PROGRAMS: () => "Solo hay autoridades controladas por un programa (ver dependencia)",
     CTL_NONE: () => "Sin autoridades activas: nadie puede crear más ni congelar",
     CTL_SERIAL_CREATOR: (d) => "El creador ha lanzado " + d.n + " tokens más en las últimas 24 h (según RugCheck): es un lanzador en serie, que suele abandonar cada token en cuanto llegan compradores",
+    BRAND_COPY: (d) => "Usa el nombre de " + d.brand + ", una empresa real que no tiene token en Solana: no es oficial, casi seguro una imitación para atraer compradores",
+    BRAND_NAME: (d) => "Usa el nombre de " + d.brand + ", una empresa real: no es un token oficial de " + d.brand,
+    COPYCAT: (d) => "Hay " + (d.n === 1 ? "otro token" : d.n + " tokens más") + " con el mismo nombre y ticker; el más antiguo (" + short(d.original) + ", de hace " + d.days + (d.days === 1 ? " día" : " días") + ") no es este: comprueba que tienes la dirección correcta",
     HOLD_GROUP: (d) => d.n + " holders recibieron su primer SOL de la misma wallet y juntos tienen el " + pct(d.pct) + " del suministro: probablemente son la misma persona o equipo",
     CTL_CREATOR_HISTORY: (d) => "De los " + d.old + " tokens que el creador lanzó antes (hace más de 24 h), " + d.dead + " se quedaron por debajo de 10.000 $ de capitalización (según RugCheck): sus lanzamientos no suelen despegar",
     IMPOSTOR: (d) => "Se hace pasar por " + d.symbol + ": el " + d.symbol + " de verdad tiene otra dirección (" + short(d.real) + "). Es una copia, casi seguro una estafa",
@@ -51,7 +54,7 @@ export default {
     CON_HIGH: (d) => "La mayor wallet individual tiene el " + pct(d.w1) + " y las 10 mayores el " + pct(d.w10) + " del supply" + prog(d),
     CON_UNSPLIT: (d) => "No se pudo separar pools de personas. La mayor cuenta tiene el " + pct(d.top1) + " del supply",
 
-    MKT_LIQ_INFLATED: (d) => "Liquidez inflada: DexScreener dice " + usd(d.reported) + ", pero el pool solo tiene unos " + usd(d.real) + " en tokens de verdad (USDC, USDT o SOL). Es lo máximo que podrías sacar al vender",
+    MKT_LIQ_INFLATED: (d) => "Liquidez inflada: DexScreener dice " + usd(d.reported) + ", pero el pool solo tiene unos " + usd(d.real) + " en tokens de verdad (USDC, USDT o SOL). Es lo máximo que podrías sacar al vender" + (d.reported >= 100 * Math.max(d.real, 1) ? ". Una diferencia así no es casual: está montada para que el token parezca establecido" : ""),
     MKT_LIQ_VERY_LOW: (d) => "Liquidez muy baja (" + usd(d.liq) + ")",
     MKT_LIQ_LOW: (d) => "Liquidez baja (" + usd(d.liq) + ")",
     MKT_VOLUME_LOW: (d) => "Volumen de 24 h casi nulo (" + usd(d.vol) + ")",

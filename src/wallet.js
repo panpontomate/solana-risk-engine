@@ -30,7 +30,7 @@ export async function analyzeToken(client, mint, opts) {
     await geckoLiquidity(client, mkr.data[mint]);
   }
   progress(opts.onProgress, "token", 0.45);
-  const r = await assess(client, mint, mkr.data[mint] || null, { marketUnknown: mkr.failed.length > 0, skipConcentration: opts.skipConcentration, skipCreator: opts.skipCreator });
+  const r = await assess(client, mint, mkr.data[mint] || null, { marketUnknown: mkr.failed.length > 0, skipConcentration: opts.skipConcentration, skipCreator: opts.skipCreator, copies: opts.copies !== false });
   if (!r) throw new ScanError("IS_NFT", "that address is an NFT, not a token");
   progress(opts.onProgress, "done", 1);
   return r;

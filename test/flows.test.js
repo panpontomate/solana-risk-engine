@@ -280,10 +280,10 @@ test("analyzeWallet: sorting, known tokens, inflated-liquidity value cap and pro
   assert.equal(by[FAKE].value, 2);                 // valued at what can really be taken out
   assert.equal(by[FAKE].lights[2].items[0].code, "MKT_LIQ_INFLATED");
   assert.equal(by[NOMK].lvl, "NO_MARKET");
-  // BAD: mint authority + tiny liquidity; FAKE: one red light (inflated liquidity) is medium
+  // BAD: mint authority + tiny liquidity; FAKE: liquidity faked 100 times over is high risk on its own
   assert.equal(by[BAD].lvl, "HIGH");
-  assert.equal(by[FAKE].lvl, "MEDIUM");
-  assert.deepEqual(r.results.map((x) => x.lvl), ["HIGH", "MEDIUM", "LOW", "LOW", "NO_MARKET"]);
+  assert.equal(by[FAKE].lvl, "HIGH");
+  assert.deepEqual(r.results.map((x) => x.lvl), ["HIGH", "HIGH", "LOW", "LOW", "NO_MARKET"]);
   assert.ok(fractions.every((f, i) => i === 0 || f >= fractions[i - 1]), "progress never goes backwards");
   assert.equal(fractions[fractions.length - 1], 1);
 });

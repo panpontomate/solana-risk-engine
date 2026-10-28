@@ -1,4 +1,4 @@
-import { DEX, GECKO, USDC, USDT, WSOL, FAMOUS } from "./constants.js";
+import { DEX, DEX_SEARCH, GECKO, USDC, USDT, WSOL, FAMOUS, BRANDS } from "./constants.js";
 import { ScanError, isCancel } from "./errors.js";
 import { sleep } from "./util.js";
 
@@ -27,6 +27,55 @@ export function impostorOf(mint, pair) {
   const n = String(b.name || "").trim().toLowerCase();
   if (!FAMOUS[s]) { if (n === "usd coin") s = "USDC"; else if (n === "tether usd" || n === "tether") s = "USDT"; }
   return (FAMOUS[s] && FAMOUS[s] !== mint) ? { sym: s, real: FAMOUS[s] } : null;
+}
+
+// Liquidity reported at 100 times what is really there is not a quirk of the pool: it is set up so the
+// token looks established (a "Shopify" showing $12.9M with $52 behind it)
+export const FAKE_LIQ_RATIO = 100;
+export function fakeLiquidity(pair) {
+  const real = (pair && pair.liquidity && pair.liquidity.usd) || 0;
+  return !!(pair && pair.liqRaw && pair.liqRaw >= FAKE_LIQ_RATIO * Math.max(real, 1));
+}
+
+// A real company's name on a token that is not issued by anyone: {brand, exact}. exact = the name or the
+// symbol is just the brand ("Spotify"); otherwise the brand is one word of a longer name ("Spotify Cat")
+export function brandOf(pair, type) {
+  if (type === "TOKENIZED" || type === "BRIDGED" || type === "STABLE") return null;
+  const b = (pair && pair.baseToken) || {};
+  const clean = function (s) { return String(s || "").toLowerCase().replace(/[$'’.\-_]/g, " ").replace(/\s+/g, " ").trim(); };
+  const name = clean(b.name), sym = clean(b.symbol);
+  for (const k of Object.keys(BRANDS)) {
+    const w = k.replace(/_/g, " ");
+    if (name === w || sym === w || name.replace(/ /g, "") === w.replace(/ /g, "")) return { brand: BRANDS[k], exact: true };
+    if ((" " + name + " ").indexOf(" " + w + " ") >= 0) return { brand: BRANDS[k], exact: false };
+  }
+  return null;
+}
+
+// Other Solana tokens with the same name and symbol (DexScreener search). The oldest one is taken as
+// the original. Returns null when this token is the oldest or nothing else matches.
+export async function copiesOf(client, mint, pair, now) {
+  const b = (pair && pair.baseToken) || {};
+  if (!b.symbol) return null;
+  const res = await client.softJson(DEX_SEARCH + encodeURIComponent(b.symbol), 8000);
+  const norm = function (s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); };
+  const sym = norm(b.symbol), name = norm(b.name);
+  const by = {};
+  ((res && res.pairs) || []).forEach(function (p) {
+    const t = p.baseToken || {};
+    if (p.chainId !== "solana" || !t.address || norm(t.symbol) !== sym || norm(t.name) !== name) return;
+    const cur = by[t.address];
+    const liq = (p.liquidity && p.liquidity.usd) || 0, at = p.pairCreatedAt || 0;
+    if (!cur) by[t.address] = { addr: t.address, liq: liq, at: at };
+    else { cur.liq = Math.max(cur.liq, liq); if (at && (!cur.at || at < cur.at)) cur.at = at; }
+  });
+  const mine = by[mint] || { addr: mint, liq: (pair.liquidity && pair.liquidity.usd) || 0, at: pair.pairCreatedAt || 0 };
+  const others = Object.keys(by).filter(function (a) { return a !== mint; }).map(function (a) { return by[a]; });
+  if (!others.length) return null;
+  const oldest = others.filter(function (o) { return o.at; }).sort(function (x, y) { return x.at - y.at; })[0];
+  // this token is itself the oldest (or the dates are unknown): it is the original, the others copy it
+  if (!oldest || (mine.at && mine.at <= oldest.at)) return null;
+  return { n: others.length, original: oldest.addr, days: Math.floor(((now || Date.now()) - oldest.at) / 86400000), origLiq: oldest.liq, liq: mine.liq };
 }
 
 // Best (most liquid) DexScreener pair per mint, 30 mints per request.

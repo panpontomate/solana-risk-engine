@@ -44,7 +44,7 @@ export { ScanError, isCancel } from "./errors.js";
 export * from "./constants.js";
 export { isOnCurve, onCurve, b58bytes } from "./curve.js";
 export { getTokens, getMint, getConc, getAuthKinds, isMint, accountKinds, kindOf } from "./tokens.js";
-export { getMarkets, realLiq, impostorOf, INFLATED_RATIO, geckoLiquidity, geckoPair } from "./markets.js";
+export { getMarkets, realLiq, impostorOf, INFLATED_RATIO, geckoLiquidity, geckoPair, brandOf, copiesOf, fakeLiquidity, FAKE_LIQ_RATIO } from "./markets.js";
 export { rugcheckSummary, rugcheckReport, rugcheckGraph, netBalances, creatorLaunches, CREATOR_DEAD_MCAP } from "./rugcheck.js";
 export { score, tokenType, buildLights, levelFrom, dataOnly, reasonsFrom, assess, SERIAL_WARN, SERIAL_BAD, HISTORY_MIN, HISTORY_WARN, HISTORY_BAD_MIN, HISTORY_BAD } from "./risk.js";
 export { recentLaunches } from "./launch.js";

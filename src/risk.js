@@ -2,7 +2,7 @@ import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
-import { impostorOf } from "./markets.js";
+import { impostorOf, brandOf, copiesOf, fakeLiquidity } from "./markets.js";
 import { rugcheckSummary, creatorLaunches } from "./rugcheck.js";
 
 // Every finding is a "signal": {code, s, data}. `s` is ok | na | warn | bad, `data` holds the numbers
@@ -213,6 +213,8 @@ export async function assess(client, mint, pair, opts) {
   // Serial launching only matters while a token is new; RugCheck's full report is small (~10 KB) then
   const fresh = pair && !opts.skipCreator && (!pair.pairCreatedAt || Date.now() - pair.pairCreatedAt < 7 * DAY);
   const launchPromise = fresh ? creatorLaunches(client, mint) : Promise.resolve(null);
+  // Copies of the same name and ticker: one search per token, so only when asked (a single token, not a wallet)
+  const copiesPromise = pair && opts.copies ? copiesOf(client, mint, pair).catch(function (e) { if (isCancel(e)) throw e; return null; }) : Promise.resolve(null);
   let info = null, conc = null;
   try { info = await getMint(client, mint); } catch (e) { if (isCancel(e)) throw e; }
   if (info && info.decimals === 0 && info.supply === 1) return null;   // NFT
@@ -228,26 +230,37 @@ export async function assess(client, mint, pair, opts) {
       catch (e) { if (isCancel(e)) throw e; conc = null; if (!tryC) await sleep(client.retryDelayMs === undefined ? 1500 : client.retryDelayMs); }
     }
   }
-  const rc = await rcPromise, launches = await launchPromise;
+  const rc = await rcPromise, launches = await launchPromise, copies = await copiesPromise;
   const base = (pair && pair.baseToken) || {};
   let lvl, sev = 0, reasons = [], lights = null, type = null, pts = 0, imp = null;
   if (pair) {
     type = tokenType(info, pair);
     lights = buildLights(info, conc, pair, value, type, rc, null, launches);
     imp = impostorOf(mint, pair);
-    if (imp) {
-      const prev = lights[0];
-      lights[0] = { k: "control", s: "bad", items: [sig("IMPOSTOR", "bad", { symbol: imp.sym, real: imp.real })].concat(prev.s !== "ok" ? prev.items : []) };
+    const brand = imp ? null : brandOf(pair, type);
+    // copying a famous token, a real company or an older token with the same name and ticker
+    const front = [];
+    if (imp) front.push(sig("IMPOSTOR", "bad", { symbol: imp.sym, real: imp.real }));
+    if (brand) front.push(sig(brand.exact ? "BRAND_COPY" : "BRAND_NAME", brand.exact ? "bad" : "warn", { brand: brand.brand }));
+    if (copies && !imp) {
+      const strong = copies.origLiq >= 50000 && copies.origLiq >= 10 * Math.max(copies.liq, 1);
+      front.push(sig("COPYCAT", strong ? "bad" : "warn", copies));
+    }
+    if (front.length) {
+      const prev = lights[0], st = front.some(function (x) { return x.s === "bad"; }) ? "bad" : (prev.s === "bad" ? "bad" : "warn");
+      lights[0] = { k: "control", s: st, items: front.concat(prev.s !== "ok" ? prev.items : []) };
     }
     const lf = levelFrom(lights); lvl = lf.lvl; sev = lf.sev; reasons = reasonsFrom(lights);
-    if (imp) { lvl = "HIGH"; sev += 5; }   // a copy is high risk even if everything else looks normal
+    // a copy of a famous token or a real company, or liquidity faked 100 times over, is high risk even
+    // when everything else looks normal: it is built to look like something it is not
+    if (imp || (brand && brand.exact) || fakeLiquidity(pair)) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
   } else {
     const s = score(info);
     pts = s.pts; reasons = s.why; lvl = pts >= 25 ? "SPAM" : "NO_MARKET";
   }
   return {
     mint: mint, sym: base.symbol || short(mint), name: base.name || "", pts: pts, sev: sev,
-    lvl: lvl, type: type, lights: lights, reasons: reasons, impostor: imp, value: value, pair: pair,
+    lvl: lvl, type: type, lights: lights, reasons: reasons, impostor: imp, copies: copies, value: value, pair: pair,
     rugcheck: rc ? { lpLockedPct: rc.lpLockedPct, score: rc.score_normalised !== undefined ? rc.score_normalised : rc.score } : null,
     creator: launches,
     img: (pair && pair.info && pair.info.imageUrl) || null

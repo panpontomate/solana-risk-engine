@@ -73,7 +73,7 @@ Methods (all accept `{ onProgress(step, fraction) }`):
 | `analyzeToken(mint, { skipCreator })` | `{ lvl, sev, type, lights, reasons, impostor, pair, creator, ... }` |
 | `analyzeWallet(wallet, { minUsd })` | `{ sol, balances, total, hidden, results: [token results] }` |
 | `analyzeAddress(addr)` | `{ kind: "token" \| "wallet", ... }`, detected automatically |
-| `analyzeHolders(mint)` | `{ rows, clusters, groups, hotGroups, creator, mode, ageDays, signals, ... }`. Young tokens (under 14 days) also trace busy wallets; a source over 350 tx/h counts as an exchange; a group over 10% (young) or 15% (mature) of the supply gives a `HOLD_GROUP` signal. Best with your own RPC. |
+| `analyzeHolders(mint)` | `{ rows, clusters, groups, hotGroups, creator, mode, ageDays, signals, ... }`. Young tokens (under 14 days) also trace busy wallets; a source over 100 tx/h counts as an exchange; a group over 10% (young) or 15% (mature) of the supply gives a `HOLD_GROUP` signal. Best with your own RPC. |
 | `estimatePnl(wallets)` | `{ pnl: { [wallet]: { realized, unreal, total, ret, st, open } } }`. Needs Helius. |
 | `takeSnapshots(wallets)` | Today's holdings. Store them yourself and pass them to `diffSnapshots(prev, next)`. |
 | `confluence(wallets, { pct, withPnl, pnlFilter })` | Tokens held in common, with risk. |
