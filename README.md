@@ -73,7 +73,8 @@ Methods (all accept `{ onProgress(step, fraction) }`):
 | `analyzeToken(mint, { skipCreator })` | `{ lvl, sev, type, lights, reasons, impostor, pair, creator, ... }` |
 | `analyzeWallet(wallet, { minUsd })` | `{ sol, balances, total, hidden, results: [token results] }` |
 | `analyzeAddress(addr)` | `{ kind: "token" \| "wallet", ... }`, detected automatically |
-| `analyzeHolders(mint)` | `{ rows, clusters, groups, hotGroups, creator, mode, ageDays, signals, ... }`. Young tokens (under 14 days) also trace busy wallets; a source over 100 tx/h counts as an exchange; a group over 10% (young) or 15% (mature) of the supply gives a `HOLD_GROUP` signal. Best with your own RPC. |
+| `analyzeHolders(mint)` | `{ rows, clusters, groups, hotGroups, creator, mode, ageDays, signals, ... }`. Young tokens (under 14 days) also trace busy wallets; a source over 100 tx/h counts as an exchange; a group over 10% (young) or 15% (mature) of the supply gives a `HOLD_GROUP` signal. With `{ base: true }` it also reads [SolFlag's wallet base](https://solflag.com/datos/base.json) (exchanges, launch farms, distributors and serial creators its collector has seen): known exchanges are recognised without measuring them, and rows and group sources get `known` / `knownSources`. Best with your own RPC. |
+| `loadWalletBase([url])` | SolFlag's wallet base `{ wallets: { addr: { t, ph, n, roles } } }`, or `null` if it cannot be read. Kept 10 minutes. `knownType(base, addr)` gives a wallet's type. |
 | `estimatePnl(wallets)` | `{ pnl: { [wallet]: { realized, unreal, total, ret, st, open } } }`. Needs Helius. |
 | `takeSnapshots(wallets)` | Today's holdings. Store them yourself and pass them to `diffSnapshots(prev, next)`. |
 | `confluence(wallets, { pct, withPnl, pnlFilter })` | Tokens held in common, with risk. |

@@ -74,6 +74,36 @@ test("without a market the age comes from RugCheck; with neither it counts as ma
   assert.equal(h2.ageDays, null);
 });
 
+test("wallet base: a known exchange source is taken as such without measuring it, known rows are tagged", async () => {
+  // DIST does 50 an hour: on its own it is a distributor; the base says it is an exchange
+  const w = world(3);
+  w.base = { v: 1, wallets: { [DIST]: { t: "exchange", ph: 400 }, [TEAM]: { t: "repartidor" }, [P2]: { t: "granja" }, [B2]: { t: "exchange" }, x: { t: "nonsense" } } };
+  const f = fakeChain(w);
+  const h = await createScanner({ rpcUrl: OWN, fetch: f, retryDelayMs: 0 }).analyzeHolders(M, { creator: false, now: NOW, base: true });
+  assert.equal(h.clusters[P1], undefined);                     // the exchange's "group" is gone
+  assert.equal(h.clusters[B1].funder, TEAM);
+  assert.deepEqual(h.knownSources, { [TEAM]: "repartidor" });
+  assert.equal(h.rows.find((r) => r.owner === P2).known, "granja");
+  assert.equal(h.rows.find((r) => r.owner === B2).known, "exchange");
+  // DIST was never asked how busy it is
+  assert.equal(f.calls.filter((c) => c.method === "getSignaturesForAddress" && c.params[0] === DIST).length, 0);
+});
+
+test("wallet base: off by default, passed in directly, and a missing base changes nothing", async () => {
+  const w = world(3);
+  w.base = { v: 1, wallets: { [DIST]: { t: "exchange" } } };
+  const off = await createScanner({ rpcUrl: OWN, fetch: fakeChain(w), retryDelayMs: 0 }).analyzeHolders(M, { creator: false, now: NOW });
+  assert.equal(off.clusters[P1].funder, DIST);
+  assert.deepEqual(off.knownSources, {});
+  const direct = await createScanner({ rpcUrl: OWN, fetch: fakeChain(world(3)), retryDelayMs: 0 })
+    .analyzeHolders(M, { creator: false, now: NOW, base: { wallets: { [DIST]: { t: "exchange" } } } });
+  assert.equal(direct.clusters[P1], undefined);
+  const s = createScanner({ rpcUrl: OWN, fetch: fakeChain(world(3)), retryDelayMs: 0 });   // base.json answers 404
+  assert.equal(await s.loadWalletBase("https://base.example.test/none.json"), null);
+  const down = await s.analyzeHolders(M, { creator: false, now: NOW, base: { wallets: {} } });
+  assert.equal(down.clusters[P1].funder, DIST);
+});
+
 test("perHour and groupList", () => {
   assert.equal(perHour(sigsOver("x", 101, 3600)), 101);
   assert.equal(perHour([]), 0);

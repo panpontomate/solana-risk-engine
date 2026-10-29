@@ -5,6 +5,8 @@
 export const PUBLIC_RPC = "https://solana-rpc.publicnode.com";
 export const VIBE_RPC = "https://public.rpc.solanavibestation.com";
 export const DEX = "https://api.dexscreener.com/tokens/v1/solana/";
+// SolFlag's wallet base (see base.js)
+export const WALLET_BASE_URL = "https://solflag.com/datos/base.json";
 export const DEX_SEARCH = "https://api.dexscreener.com/latest/dex/search?q=";
 export const RUGCHECK = "https://api.rugcheck.xyz/v1/tokens/";
 export const GECKO = "https://api.geckoterminal.com/api/v2/networks/solana/";

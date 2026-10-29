@@ -4,6 +4,7 @@ import { pool, progress, short, uniq } from "./util.js";
 import { getMint, accountKinds } from "./tokens.js";
 import { getMarkets } from "./markets.js";
 import { rugcheckReport, rugcheckGraph, rugcheckSummary, netBalances } from "./rugcheck.js";
+import { loadWalletBase, knownType } from "./base.js";
 
 // Largest accounts of a token, each traced to its owner, and whether each owner is a wallet or a program
 export async function holderBase(client, mint, onProgress) {
@@ -203,6 +204,9 @@ export async function creatorInfo(client, mint, onProgress) {
  * over 10% of the supply in a young token (bad) or 15% in a mature one (warn) is a HOLD_GROUP signal.
  *
  * @param [opts.creator=true]  also look up the creator and insider networks on RugCheck
+ * @param [opts.base]          SolFlag's wallet base: true to load it (solflag.com/datos/base.json), or the base
+ *                             itself. Known exchanges are taken as such without measuring them, and every row
+ *                             it knows gets known: "exchange" | "granja" | "repartidor" | "creador en serie" | "sniper"
  * @param [opts.createdAt]     ms when its market started, if the caller knows it
  * @param [opts.now]
  * @returns {..., mode: "young"|"mature", ageDays, groups, signals}
@@ -215,6 +219,13 @@ export async function analyzeHolders(client, mint, opts) {
   const wal = b.uniq.filter(function (o) { return b.kind[o] === "wallet"; });
   const busy = await markBusy(client, b.kind, wal, function (c, n) { progress(onProgress, "bots", 0.65 + 0.15 * c / Math.max(1, n), { done: c, total: n }); });
   const hr = holderRows(b, busy), pair = b.pair;
+  const base = opts.base === true ? await loadWalletBase(client) : (opts.base || null);
+  hr.rows.forEach(function (r) {
+    const t = knownType(base, r.owner);
+    if (!t) return;
+    r.known = t;
+    if (t === "exchange" && r.kind === "wallet") r.kind = "active";   // quiet hours made it look like a person
+  });
   const now = opts.now || Date.now();
   let created = opts.createdAt || (pair && pair.pairCreatedAt) || null;
   if (!created) {
@@ -234,9 +245,9 @@ export async function analyzeHolders(client, mint, opts) {
     if (srcs.length) {
       // a source is an exchange when it moves more than EXCHANGE_PER_HOUR transactions an hour (the bot
       // test, 200 in 2 days, also caught distributors doing ~50 an hour and hid their groups)
-      const rates = await sourceRates(client, srcs, function (c, n) { progress(onProgress, "exchangeSources", 0.88 + 0.02 * c / Math.max(1, n), { done: c, total: n }); });
-      const hot = {};
-      srcs.forEach(function (f) { if (rates[f] > EXCHANGE_PER_HOUR) hot[f] = true; });
+      const hot = {}, ask = srcs.filter(function (f) { if (knownType(base, f) === "exchange") { hot[f] = true; return false; } return true; });
+      const rates = ask.length ? await sourceRates(client, ask, function (c, n) { progress(onProgress, "exchangeSources", 0.88 + 0.02 * c / Math.max(1, n), { done: c, total: n }); }) : {};
+      ask.forEach(function (f) { if (rates[f] > EXCHANGE_PER_HOUR) hot[f] = true; });
       hotGroups = srcs.filter(function (f) { return hot[f]; }).length;
       if (hotGroups) clusters = clusterByFunder(funders, hot);
     }
@@ -255,6 +266,9 @@ export async function analyzeHolders(client, mint, opts) {
     mint: mint, sym: (pair && pair.baseToken && pair.baseToken.symbol) || short(mint),
     name: (pair && pair.baseToken && pair.baseToken.name) || "", price: hr.price, rows: hr.rows,
     mintAuth: !!b.info.mintAuth, freezeAuth: !!b.info.freezeAuth, clusters: clusters, hotGroups: hotGroups, creator: creator,
-    mode: mode, ageDays: ageDays, groups: groups, signals: signals
+    mode: mode, ageDays: ageDays, groups: groups, signals: signals,
+    // sources of groups the base knows (a known distributor or farm behind a group is worth saying)
+    knownSources: base ? uniq(groups.map(function (g) { return g.funder; })).filter(function (f) { return knownType(base, f); })
+      .reduce(function (o, f) { o[f] = knownType(base, f); return o; }, {}) : {}
   };
 }

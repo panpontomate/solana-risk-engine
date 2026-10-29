@@ -5,6 +5,7 @@ import { estimatePnl } from "./pnl.js";
 import { takeSnapshots } from "./changes.js";
 import { confluence, commonHolders } from "./confluence.js";
 import { getTokens } from "./tokens.js";
+import { loadWalletBase } from "./base.js";
 
 /**
  * The easy entry point: one object with every high-level analysis bound to one network client.
@@ -35,7 +36,8 @@ export function createScanner(opts) {
     },
     takeSnapshots: (wallets, o) => takeSnapshots(client, wallets, o),
     confluence: (wallets, o) => confluence(client, wallets, o),
-    commonHolders: (mints, o) => commonHolders(client, mints, o)
+    commonHolders: (mints, o) => commonHolders(client, mints, o),
+    loadWalletBase: (url) => loadWalletBase(client, url)
   };
 }
 
@@ -54,4 +56,5 @@ export { holderBase, markBusy, findFunder, findFunders, clusterByFunder, holderR
 export { fetchSwaps, solHistory, priceSeries, parseTrades, pnlFromTrades, pnlStatus, estimatePnl } from "./pnl.js";
 export { capSnap, chgDiff, chgAgg, takeSnapshots, diffSnapshots } from "./changes.js";
 export { confluence, commonHolders } from "./confluence.js";
+export { loadWalletBase, knownType, WALLET_TYPES } from "./base.js";
 export { describe, explainLight, lightLabel, levelLabel, missingText, typeInfo, describeStep, describeNote, describeError, format, addLanguage } from "./i18n/index.js";

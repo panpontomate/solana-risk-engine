@@ -1,7 +1,7 @@
 // An in-memory Solana + DexScreener + RugCheck + Helius + CoinGecko, answering through a fake fetch.
 // Describe the world declaratively and every engine function can run end to end against it.
 import { createHash } from "node:crypto";
-import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO } from "../src/constants.js";
+import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO, WALLET_BASE_URL } from "../src/constants.js";
 import { onCurve } from "../src/curve.js";
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -137,6 +137,7 @@ export function fakeChain(world) {
       if (m) return g.tokens && g.tokens[m[1]] ? g.tokens[m[1]] : { data: [] };
       return { __status: 404 };
     }
+    if (url === WALLET_BASE_URL) return w.base || { __status: 404 };
     if (url === COINGECKO_SOL) return w.solPrices ? { prices: w.solPrices } : { __status: 500 };
     return { __status: 404 };
   }
