@@ -35,6 +35,7 @@ export default {
     CTL_NON_TRANSFERABLE: () => "Cannot be transferred",
     CTL_DEFAULT_FROZEN: () => "New accounts can be created frozen",
     CTL_ONLY_PROGRAMS: () => "Only program-controlled authorities (see dependency)",
+    CTL_KNOWN_ISSUER: (d) => "Controlled by its issuer, " + d.issuer + " (see dependency)",
     CTL_NONE: () => "No active authorities: nobody can mint more or freeze",
     CTL_SERIAL_CREATOR: (d) => "The creator launched " + d.n + " other tokens in the last 24 h (per RugCheck): a serial launcher, who usually drops each token as soon as buyers arrive",
     BRAND_COPY: (d) => "Uses the name of " + d.brand + ", a real company with no token on Solana: it is not official, almost certainly an imitation to draw buyers",
@@ -64,6 +65,7 @@ export default {
     DEP_PROGRAM_AUTHORITY: () => "A program controls the mint or freeze (bridge or protocol): you have to trust its code",
     DEP_PERMANENT_DELEGATE: () => "The issuer can move or burn your tokens (permanent delegate): you trust the issuer",
     DEP_STABLE_ISSUER: () => "Its value depends on whoever issues and backs it",
+    DEP_KNOWN_ISSUER: (d) => "Issued by " + d.issuer + ": it can mint, freeze or move tokens, like any regulated issuer. You trust the issuer",
     DEP_NONE: () => "Does not depend on an issuer or a bridge"
   },
   offSolana: " and its main market may be outside Solana",

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, INFLATED_RATIO, USDC, WSOL, FAMOUS } from "../src/index.js";
+import { issuerOf, tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, INFLATED_RATIO, USDC, WSOL, FAMOUS } from "../src/index.js";
 
 const DAY = 86400000;
 const NOW = Date.UTC(2026, 9, 1);
@@ -133,6 +133,48 @@ test("heavy position and bridged off-Solana note", () => {
   assert.equal(lights[0].items[0].code, "CTL_ONLY_PROGRAMS");
 });
 
+const XS = ["7pt9tkctJPK7PPNQJ77GKg8ZffSF6QxoMiCFYHxrtaCj", "JDq14BWvqCRFNu1krb12bcRpbGtJZ1FLEakMw6FdxJNs",
+  "5aMNNLQJwAEeoemTEMkv5NVjqKwvvefRYCQ5Z67HFvEq", "S7vYFFWH6BjJyEsdrPQpqpYTqLTrPRK6KW3VwsJuRaS"];
+const xstock = (o) => info(Object.assign({ mintAuth: XS[0], freezeAuth: XS[1], authKind: { [XS[0]]: "wallet", [XS[1]]: "program" },
+  ext: ["permanentDelegate", "defaultAccountState", "transferHook", "pausableConfig", "scaledUiAmountConfig"],
+  hook: { program: null, auth: XS[2] }, defaultState: "initialized", extKeys: [XS[2], XS[3], XS[1]] }, o));
+const xsConc = { ok: true, w1: 28, w10: 58, prog: 6, nW: 16 };   // custodians and exchanges
+
+test("a known issuer's tokenized share is not a creator who can rug", () => {
+  const i = xstock(), p = pair({ baseToken: { symbol: "TSLAx", name: "Tesla xStock" } });
+  assert.equal(issuerOf(i), "xStocks (Backed)");
+  const lights = buildLights(i, xsConc, p, 0, tokenType(i, p, NOW), null, NOW);
+  assert.deepEqual(lights[0].items, [{ code: "CTL_KNOWN_ISSUER", s: "ok", data: { issuer: "xStocks (Backed)" } }]);
+  assert.deepEqual(lights[3].items, [{ code: "DEP_KNOWN_ISSUER", s: "warn", data: { issuer: "xStocks (Backed)" } }]);
+  assert.equal(levelFrom(lights).lvl, "MEDIUM");     // was HIGH: issuer's mint authority counted as a rug risk
+  assert.equal(levelFrom(buildLights(i, goodConc, p, 0, "TOKENIZED", null, NOW)).lvl, "LOW");
+});
+
+test("borrowing an issuer's key is not enough to pass as the issuer", () => {
+  const p = pair();
+  // mint authority handed to the issuer's wallet, but the scammer keeps the permanent delegate
+  const fake = xstock({ extKeys: ["Scammer1", XS[3], XS[1]] });
+  assert.equal(issuerOf(fake), null);
+  const l = buildLights(fake, goodConc, p, 0, "TOKENIZED", null, NOW);
+  assert.ok(l[0].items.some((x) => x.code === "CTL_MINT_ACTIVE" && x.s === "bad"));
+  assert.ok(l[3].items.some((x) => x.code === "DEP_PERMANENT_DELEGATE"));
+  // own freeze authority
+  assert.equal(issuerOf(xstock({ freezeAuth: "Scammer1" })), null);
+  // mint info without the extension keys (older callers) is never trusted
+  assert.equal(issuerOf(xstock({ extKeys: undefined })), null);
+});
+
+test("hooks and default frozen accounts count only as they are set", () => {
+  const p = pair(), codes = (o) => buildLights(info(o), goodConc, p, 0, "OPEN", null, NOW)[0].items.map((x) => x.code);
+  assert.deepEqual(codes({ ext: ["transferHook"], hook: { program: null, auth: null } }), ["CTL_NONE"]);
+  assert.deepEqual(codes({ ext: ["transferHook"], hook: { program: "Hook1", auth: null } }), ["CTL_TRANSFER_HOOK"]);
+  assert.deepEqual(codes({ ext: ["transferHook"], hook: { program: null, auth: "Dev1" } }), ["CTL_TRANSFER_HOOK"]);   // can add one later
+  assert.deepEqual(codes({ ext: ["transferHook"] }), ["CTL_TRANSFER_HOOK"]);                                       // not read: assume the worst
+  assert.deepEqual(codes({ ext: ["defaultAccountState"], defaultState: "initialized" }), ["CTL_NONE"]);
+  assert.deepEqual(codes({ ext: ["defaultAccountState"], defaultState: "frozen" }), ["CTL_DEFAULT_FROZEN"]);
+  assert.deepEqual(codes({ ext: ["defaultAccountState"] }), ["CTL_DEFAULT_FROZEN"]);
+});
+
 test("spam score for tokens without a market", () => {
   assert.equal(score(null).pts, 30);
   const s = score(info({ mintAuth: "X", freezeAuth: "X", authKind: { X: "wallet" }, ext: ["transferHook"] }));
@@ -189,6 +231,9 @@ test("creator track record thresholds", () => {
   assert.equal(h(5, 3), undefined);          // 60%: some took off
   assert.equal(h(5, 4).s, "warn");           // 80%
   assert.equal(h(9, 9).s, "warn");           // all dead but under 10 launches
-  assert.equal(h(20, 18).s, "bad");          // 90% of 20
+  assert.equal(h(20, 18).s, "warn");         // 90% of 20: two took off
+  assert.equal(h(20, 19).s, "bad");          // 95%
+  assert.equal(h(10, 10).s, "bad");
+  assert.equal(h(10, 9).s, "warn");          // one of ten took off: better than chance, not red
   assert.equal(buildLights(i, goodConc, p, 0, "OPEN", null, NOW, null)[0].items.some((x) => x.code === "CTL_CREATOR_HISTORY"), false);
 });

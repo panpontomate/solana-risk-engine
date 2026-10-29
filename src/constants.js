@@ -60,6 +60,19 @@ export const BRANDS = {
   adidas: "Adidas", gucci: "Gucci", louis_vuitton: "Louis Vuitton", rolex: "Rolex", spacex: "SpaceX", neuralink: "Neuralink"
 };
 
+// Known issuers of tokenized assets: every key that controls their tokens (mint, freeze, permanent delegate,
+// hook, pause, scaling). A token is theirs only if ALL its control keys are in the list, so copying one key
+// (anyone can hand the mint authority to someone else's wallet) is not enough. Their control is the point of
+// the product: it is shown as dependency on the issuer, not as a creator who can rug
+export const ISSUERS = [
+  { name: "xStocks (Backed)", keys: [
+    "7pt9tkctJPK7PPNQJ77GKg8ZffSF6QxoMiCFYHxrtaCj",   // mint
+    "JDq14BWvqCRFNu1krb12bcRpbGtJZ1FLEakMw6FdxJNs",   // freeze and pause (program)
+    "5aMNNLQJwAEeoemTEMkv5NVjqKwvvefRYCQ5Z67HFvEq",   // permanent delegate, transfer hook, confidential transfers
+    "S7vYFFWH6BjJyEsdrPQpqpYTqLTrPRK6KW3VwsJuRaS"     // share-split multiplier (scaled UI amount)
+  ] }
+];
+
 // Token-2022 extensions that add risk, with the points they add to the no-market spam score
 export const EXT_POINTS = {
   permanentDelegate: 25,

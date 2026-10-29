@@ -457,5 +457,6 @@ test("creator track record: older launches that never took off", async () => {
   const r = await scanner(w).analyzeToken(w.M);
   assert.deepEqual(r.creator, { creator: "Farm1", day: 1, total: 13, old: 11, dead: 10, best: 85000 });
   const s = r.lights[0].items.find((x) => x.code === "CTL_CREATOR_HISTORY");
-  assert.deepEqual(s, { code: "CTL_CREATOR_HISTORY", s: "bad", data: { old: 11, dead: 10, best: 85000, creator: "Farm1" } });
+  // one of eleven took off: yellow, not red (red needs 95%)
+  assert.deepEqual(s, { code: "CTL_CREATOR_HISTORY", s: "warn", data: { old: 11, dead: 10, best: 85000, creator: "Farm1" } });
 });

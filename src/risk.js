@@ -1,4 +1,4 @@
-import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES } from "./constants.js";
+import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, ISSUERS } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
@@ -16,8 +16,10 @@ function sig(code, s, data) {
 const DAY = 86400000;
 // Other tokens launched by the same creator in the last 24 h that make it a serial launcher
 export const SERIAL_WARN = 2, SERIAL_BAD = 5;
-// Creator track record: at least HISTORY_MIN older tokens and this share of them never took off
-export const HISTORY_MIN = 3, HISTORY_WARN = 0.8, HISTORY_BAD_MIN = 10, HISTORY_BAD = 0.9;
+// Creator track record: at least HISTORY_MIN older tokens and this share of them never took off. Red needs
+// 95%: 86% of all new tokens never reach $10k (149-token sample, 28/10), so one launch that took off out of
+// ten is already better than chance and must not raise the verdict
+export const HISTORY_MIN = 3, HISTORY_WARN = 0.8, HISTORY_BAD_MIN = 10, HISTORY_BAD = 0.95;
 
 /* ---------- old point score: only for tokens without a market, to spot spam ---------- */
 export function score(info) {
@@ -58,6 +60,23 @@ export function tokenType(info, pair, now) {
   return "OPEN";
 }
 
+/* ---------- known issuers ---------- */
+// Name of the known issuer that holds every control key of this mint, or null. Needs the extension keys
+// read by getMint (extKeys): without them a permanent delegate or a hook could belong to anyone
+export function issuerOf(info) {
+  if (!info || !info.extKeys) return null;
+  const keys = [info.mintAuth, info.freezeAuth].concat(info.extKeys).filter(Boolean);
+  if (!keys.length) return null;
+  const found = ISSUERS.find(function (i) { return keys.every(function (k) { return i.keys.indexOf(k) >= 0; }); });
+  return found ? found.name : null;
+}
+
+// Extensions that only matter as they are set: a hook with no program and nobody able to add one does
+// nothing, and new accounts are only born frozen when the default state says "frozen". Mint info without
+// those details (older callers) keeps the old behaviour: the extension alone is enough
+function hookActive(info) { return !info.hook || !!(info.hook.program || info.hook.auth); }
+function bornFrozen(info) { return !info.defaultState || info.defaultState === "frozen"; }
+
 /* ---------- the four traffic lights ---------- */
 function mkLight(k, items, okSignal) {
   if (!items.length) return { k: k, s: "ok", items: [okSignal] };
@@ -81,18 +100,22 @@ function mkLight(k, items, okSignal) {
 export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   now = now || Date.now();
   const ak = (info && info.authKind) || {};
+  const issuer = issuerOf(info);
   let it;
 
   // 1) creator control
   it = [];
   if (!info) it.push(sig("NO_INFO", "warn"));
   else {
-    if (info.mintAuth && ak[info.mintAuth] !== "program") it.push(sig("CTL_MINT_ACTIVE", "bad"));
-    if (info.freezeAuth && ak[info.freezeAuth] !== "program") it.push(sig("CTL_FREEZE_ACTIVE", "warn"));
-    if (info.ext.indexOf("transferHook") >= 0) it.push(sig("CTL_TRANSFER_HOOK", "warn"));
+    // a known issuer's mint, freeze, hook and pause are how the product works (see dependency)
+    if (!issuer) {
+      if (info.mintAuth && ak[info.mintAuth] !== "program") it.push(sig("CTL_MINT_ACTIVE", "bad"));
+      if (info.freezeAuth && ak[info.freezeAuth] !== "program") it.push(sig("CTL_FREEZE_ACTIVE", "warn"));
+      if (info.ext.indexOf("transferHook") >= 0 && hookActive(info)) it.push(sig("CTL_TRANSFER_HOOK", "warn"));
+      if (info.ext.indexOf("defaultAccountState") >= 0 && bornFrozen(info)) it.push(sig("CTL_DEFAULT_FROZEN", "warn"));
+    }
     if (info.ext.indexOf("transferFeeConfig") >= 0) it.push(sig("CTL_TRANSFER_FEE", "warn"));
     if (info.ext.indexOf("nonTransferable") >= 0) it.push(sig("CTL_NON_TRANSFERABLE", "warn"));
-    if (info.ext.indexOf("defaultAccountState") >= 0) it.push(sig("CTL_DEFAULT_FROZEN", "warn"));
   }
   // Launch farms put out a token every few minutes and drop each one as soon as buyers arrive: in a
   // 100-token Pump.fun sample one wallet launched 7 copies of "GMS" in 10 minutes
@@ -102,7 +125,8 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
     const bad = launches.old >= HISTORY_BAD_MIN && launches.dead / launches.old >= HISTORY_BAD;
     it.push(sig("CTL_CREATOR_HISTORY", bad ? "bad" : "warn", { old: launches.old, dead: launches.dead, best: launches.best, creator: launches.creator }));
   }
-  const control = mkLight("control", it, sig((info && (info.mintAuth || info.freezeAuth)) ? "CTL_ONLY_PROGRAMS" : "CTL_NONE", "ok"));
+  const control = mkLight("control", it, issuer ? sig("CTL_KNOWN_ISSUER", "ok", { issuer: issuer })
+    : sig((info && (info.mintAuth || info.freezeAuth)) ? "CTL_ONLY_PROGRAMS" : "CTL_NONE", "ok"));
 
   // 2) concentration in people (pools and programs do not count)
   let concentration;
@@ -150,7 +174,8 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
 
   // 4) dependency on an issuer or a bridge
   it = [];
-  if (info) {
+  if (issuer) it.push(sig("DEP_KNOWN_ISSUER", "warn", { issuer: issuer }));
+  else if (info) {
     if ((info.mintAuth && ak[info.mintAuth] === "program") || (info.freezeAuth && ak[info.freezeAuth] === "program"))
       it.push(sig("DEP_PROGRAM_AUTHORITY", "warn"));
     if (info.ext.indexOf("permanentDelegate") >= 0) it.push(sig("DEP_PERMANENT_DELEGATE", "warn"));

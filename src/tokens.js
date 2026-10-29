@@ -34,11 +34,31 @@ export async function getMint(client, mint) {
   const r = await client.rpc("getAccountInfo", [mint, { encoding: "jsonParsed" }]);
   const p = r && r.value && r.value.data && r.value.data.parsed && r.value.data.parsed.info;
   if (!p) return null;
+  const exts = p.extensions || [];
+  const state = function (name) { const e = exts.find(function (x) { return x.extension === name; }); return (e && e.state) || {}; };
+  const hook = state("transferHook");
   return {
     mintAuth: p.mintAuthority || null, freezeAuth: p.freezeAuthority || null,
     supply: Number(p.supply || 0), decimals: Number(p.decimals || 0),
-    ext: (p.extensions || []).map(function (e) { return e.extension; })
+    ext: exts.map(function (e) { return e.extension; }),
+    // what the extensions are set to: a transfer hook with no program and no authority does nothing, and
+    // "default account state" only matters when new accounts are born frozen
+    hook: { program: hook.programId || null, auth: hook.authority || null },
+    defaultState: state("defaultAccountState").accountState || null,
+    // every key that controls something in the extensions (delegate, hook, pause, metadata...)
+    extKeys: extKeys(exts)
   };
+}
+
+function extKeys(exts) {
+  const out = [];
+  exts.forEach(function (e) {
+    Object.keys(e.state || {}).forEach(function (k) {
+      const v = e.state[k];
+      if (typeof v === "string" && /authority$|^delegate$|^programId$/i.test(k) && out.indexOf(v) < 0) out.push(v);
+    });
+  });
+  return out;
 }
 
 // A key off the ed25519 curve has no private key: only a program can sign for it (a PDA), whoever
