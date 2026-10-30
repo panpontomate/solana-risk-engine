@@ -47,20 +47,72 @@ export const FAMOUS = {
   ETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs", WETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs"
 };
 
-// Real companies with no token of their own on Solana: a memecoin called "Spotify" is not Spotify. Their
+// Real companies with no token of their own on Solana: a memecoin called "Spotify" is not Spotify. Clubs
+// with an official fan token on Solana (Barcelona, PSG, Juventus...) and Western Union (USDPT) are left out. Their
 // genuine tokenized shares come from an issuer (xStocks, Backpack...) and are typed TOKENIZED, so they
-// are never matched. Names only, lower case: stock tickers clash with real crypto symbols (META, COIN...)
-export const BRANDS = {
-  spotify: "Spotify", shopify: "Shopify", tesla: "Tesla", apple: "Apple", nvidia: "Nvidia", amazon: "Amazon",
-  google: "Google", alphabet: "Alphabet", microsoft: "Microsoft", facebook: "Facebook", instagram: "Instagram",
-  whatsapp: "WhatsApp", netflix: "Netflix", coinbase: "Coinbase", robinhood: "Robinhood", gamestop: "GameStop",
-  microstrategy: "MicroStrategy", paypal: "PayPal", visa: "Visa", mastercard: "Mastercard", nike: "Nike",
-  disney: "Disney", starbucks: "Starbucks", mcdonalds: "McDonald's", walmart: "Walmart", uber: "Uber",
-  airbnb: "Airbnb", tiktok: "TikTok", youtube: "YouTube", openai: "OpenAI", chatgpt: "ChatGPT", blackrock: "BlackRock",
-  jpmorgan: "JPMorgan", samsung: "Samsung", sony: "Sony", nintendo: "Nintendo", playstation: "PlayStation",
-  ferrari: "Ferrari", lamborghini: "Lamborghini", "red bull": "Red Bull", "coca cola": "Coca-Cola", pepsi: "Pepsi",
-  adidas: "Adidas", gucci: "Gucci", louis_vuitton: "Louis Vuitton", rolex: "Rolex", spacex: "SpaceX", neuralink: "Neuralink"
-};
+// are never matched. Names only: stock tickers clash with real crypto symbols (META, COIN...). A name that
+// is also an everyday word or a first name (Shell, Target, Puma, Mango, Oracle, Corona, Hermes...) is left
+// out, since a token called just that would be marked HIGH. brandKey() normalises both sides
+export function brandKey(s) {
+  return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[$'’.\-_]/g, " ").replace(/\s+/g, " ").trim();
+}
+const BRAND_NAMES = [
+  // tech, internet and AI
+  "Apple", "Google", "Alphabet", "Microsoft", "Amazon", "Nvidia", "Facebook", "Instagram", "WhatsApp", "Netflix",
+  "Spotify", "Shopify", "TikTok", "YouTube", "OpenAI", "ChatGPT", "Anthropic", "DeepSeek", "Midjourney", "Samsung",
+  "Sony", "Nintendo", "PlayStation", "Xbox", "Intel", "Qualcomm", "Broadcom", "Salesforce", "Adobe", "IBM", "Cisco",
+  "Dell", "Lenovo", "Huawei", "Xiaomi", "OnePlus", "Motorola", "Nokia", "Snapchat", "Pinterest", "Reddit", "LinkedIn",
+  "Twitter", "Telegram", "Discord", "Twitch", "Dropbox", "Airbnb", "Uber", "Lyft", "DoorDash", "Expedia", "eBay",
+  "Alibaba", "AliExpress", "Temu", "Shein", "Tencent", "Baidu", "ByteDance", "Palantir", "SpaceX", "Starlink",
+  "Neuralink", "Roblox", "Fortnite", "Epic Games", "Minecraft", "Ubisoft", "Activision", "Rockstar Games",
+  "Electronic Arts", "Panasonic", "Philips", "Siemens", "Bosch", "Nikon", "GoPro", "Bose", "Dyson", "Garmin",
+  "Fitbit", "Peloton", "Logitech", "Razer", "Asus", "Xerox", "Vodafone", "Verizon", "AT&T", "T-Mobile", "Comcast",
+  "Movistar", "Telefonica", "Wikipedia", "Duolingo",
+  // finance and payments
+  "Visa", "Mastercard", "PayPal", "American Express", "JPMorgan", "Goldman Sachs", "Morgan Stanley", "BlackRock",
+  "Vanguard", "Fidelity", "Citibank", "Wells Fargo", "Bank of America", "HSBC", "Barclays", "Santander", "BBVA",
+  "CaixaBank", "Deutsche Bank", "Revolut", "Stripe", "Klarna", "Robinhood", "Charles Schwab", "Nasdaq", "NYSE",
+  "Berkshire Hathaway", "MoneyGram", "Venmo", "Cash App", "Zelle", "Monzo", "N26", "Nubank",
+  "Mapfre", "Bankinter",
+  // crypto companies with no token on Solana
+  "Coinbase", "Binance", "Bybit", "OKX", "KuCoin", "Bitget", "Upbit", "Bithumb", "Bitpanda", "eToro",
+  "MicroStrategy", "Grayscale", "MetaMask", "Trezor", "Solflare",
+  // fashion, retail and consumer goods
+  "Nike", "Adidas", "Reebok", "New Balance", "Under Armour", "Zara", "Inditex", "H&M", "Uniqlo", "Levi's", "Lacoste",
+  "Ralph Lauren", "Tommy Hilfiger", "Calvin Klein", "Gucci", "Louis Vuitton", "Chanel", "Prada", "Dior", "Versace",
+  "Balenciaga", "Burberry", "Fendi", "Givenchy", "Yves Saint Laurent", "Armani", "Dolce & Gabbana", "Rolex",
+  "Cartier", "Patek Philippe", "Audemars Piguet", "Swatch", "Ray-Ban", "Sephora", "L'Oreal", "Nivea", "Gillette",
+  "Colgate", "Pampers", "IKEA", "Lego", "Mattel", "Barbie", "Hot Wheels", "Hasbro", "Pokemon", "Hello Kitty",
+  "Sanrio", "Walmart", "Costco", "Carrefour", "Mercadona", "El Corte Ingles", "Lidl", "Aldi", "Tesco",
+  "Home Depot", "Best Buy", "7-Eleven", "Wallapop", "Glovo", "Cabify",
+  // food and drink
+  "Coca-Cola", "Pepsi", "Red Bull", "Monster Energy", "Starbucks", "McDonald's", "Burger King", "KFC", "Domino's",
+  "Pizza Hut", "Taco Bell", "Wendy's", "Chipotle", "Dunkin", "Krispy Kreme", "Nestle", "Nutella", "Ferrero",
+  "Doritos", "Pringles", "Cheetos", "Heinz", "Kellogg's", "Heineken", "Budweiser", "Guinness",
+  "Jack Daniel's", "Johnnie Walker", "Hennessy", "Moet", "Dom Perignon", "Smirnoff", "Bacardi", "Gatorade", "Fanta",
+  "Nespresso", "Haribo", "Snickers", "M&M's", "Hershey", "Cadbury", "Lindt",
+  // cars and motorbikes
+  "Tesla", "Ferrari", "Lamborghini", "Porsche", "Bugatti", "McLaren", "Bentley", "Rolls-Royce", "Aston Martin",
+  "Maserati", "BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Toyota", "Honda", "Nissan", "Hyundai", "Chevrolet",
+  "Cadillac", "Volvo", "Peugeot", "Renault", "Harley-Davidson", "Ducati", "Yamaha", "Kawasaki", "Suzuki", "Rivian",
+  "Polestar",
+  // media, entertainment and sport
+  "Disney", "Pixar", "Marvel", "Warner Bros", "HBO", "Paramount", "Universal Studios", "DreamWorks", "Hulu",
+  "Fox News", "CNN", "ESPN", "National Geographic", "Playboy", "Nickelodeon", "Cartoon Network",
+  "Star Wars", "NBA", "NFL", "FIFA", "UEFA", "WWE", "Formula 1", "Real Madrid", "Manchester United",
+  "Bayern Munich",
+  // travel, transport, energy and health
+  "Emirates", "Qatar Airways", "Ryanair", "Lufthansa", "Boeing", "Airbus", "Marriott", "FedEx", "DHL",
+  "ExxonMobil", "Chevron", "Aramco", "Repsol", "Iberdrola", "Pfizer", "Moderna", "Johnson & Johnson",
+  "Procter & Gamble", "Unilever"
+];
+// Products that companies (or their partners) really put on Solana carry the name too: exchange staked SOL,
+// fund shares, wrapped BTC. They trade for weeks with real liquidity, while copies are new and thin, so a
+// market at least this old AND this deep is not checked for brand names
+export const BRAND_MATURE_DAYS = 30;
+export const BRAND_MATURE_LIQ = 100000;
+export const BRANDS = Object.fromEntries(BRAND_NAMES.map(function (n) { return [brandKey(n), n]; }));
 
 // Known issuers of tokenized assets: every key that controls their tokens (mint, freeze, permanent delegate,
 // hook, pause, scaling). A token is theirs only if ALL its control keys are in the list, so copying one key

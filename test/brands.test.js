@@ -15,6 +15,21 @@ test("brandOf: a real company's name on a token nobody issues", () => {
   // a word inside another word is not the brand
   assert.equal(brandOf(pair({ baseToken: { symbol: "PINE", name: "Pineapple" } }), "OPEN"), null);
   assert.equal(brandOf(pair({ baseToken: { symbol: "WIF", name: "dogwifhat" } }), "OPEN"), null);
+  // accents, apostrophes and "&" in the bigger list
+  assert.deepEqual(brandOf(pair({ baseToken: { symbol: "LO", name: "LOREAL" } }), "OPEN"), { brand: "L'Oreal", exact: true });
+  assert.deepEqual(brandOf(pair({ baseToken: { symbol: "NES", name: "Nestlé Cat" } }), "OPEN"), { brand: "Nestle", exact: false });
+  assert.deepEqual(brandOf(pair({ baseToken: { symbol: "HM", name: "H&M" } }), "OPEN"), { brand: "H&M", exact: true });
+  // an everyday word that is also a brand is not on the list
+  assert.equal(brandOf(pair({ baseToken: { symbol: "SHELL", name: "Shell" } }), "OPEN"), null);
+});
+
+test("brandOf: an established market (30 days and $100k) is not a copy", () => {
+  const now = Date.UTC(2026, 9, 30), day = 86400000;
+  const bn = { baseToken: { symbol: "BNSOL", name: "Binance Staked SOL" } };
+  assert.equal(brandOf(pair(Object.assign({ liquidity: { usd: 5_000_000 }, pairCreatedAt: now - 200 * day }, bn)), "OPEN", now), null);
+  // new, or old but thin: still checked
+  assert.deepEqual(brandOf(pair(Object.assign({ liquidity: { usd: 5_000_000 }, pairCreatedAt: now - 3 * day }, bn)), "OPEN", now), { brand: "Binance", exact: false });
+  assert.deepEqual(brandOf(pair(Object.assign({ liquidity: { usd: 20_000 }, pairCreatedAt: now - 200 * day }, bn)), "OPEN", now), { brand: "Binance", exact: false });
 });
 
 test("fakeLiquidity: reported 100 times what is really there", () => {

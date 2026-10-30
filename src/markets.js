@@ -1,4 +1,4 @@
-import { DEX, DEX_SEARCH, GECKO, USDC, USDT, WSOL, FAMOUS, BRANDS } from "./constants.js";
+import { DEX, DEX_SEARCH, GECKO, USDC, USDT, WSOL, FAMOUS, BRANDS, brandKey, BRAND_MATURE_DAYS, BRAND_MATURE_LIQ } from "./constants.js";
 import { ScanError, isCancel } from "./errors.js";
 import { sleep } from "./util.js";
 
@@ -38,16 +38,18 @@ export function fakeLiquidity(pair) {
 }
 
 // A real company's name on a token that is not issued by anyone: {brand, exact}. exact = the name or the
-// symbol is just the brand ("Spotify"); otherwise the brand is one word of a longer name ("Spotify Cat")
-export function brandOf(pair, type) {
+// symbol is just the brand ("Spotify"); otherwise the brand is one word of a longer name ("Spotify Cat").
+// Established markets (see BRAND_MATURE_DAYS) are left alone
+export function brandOf(pair, type, now) {
   if (type === "TOKENIZED" || type === "BRIDGED" || type === "STABLE") return null;
+  const liq = (pair && pair.liquidity && pair.liquidity.usd) || 0;
+  const days = (pair && pair.pairCreatedAt) ? ((now || Date.now()) - pair.pairCreatedAt) / 86400000 : 0;
+  if (days >= BRAND_MATURE_DAYS && liq >= BRAND_MATURE_LIQ) return null;
   const b = (pair && pair.baseToken) || {};
-  const clean = function (s) { return String(s || "").toLowerCase().replace(/[$'’.\-_]/g, " ").replace(/\s+/g, " ").trim(); };
-  const name = clean(b.name), sym = clean(b.symbol);
-  for (const k of Object.keys(BRANDS)) {
-    const w = k.replace(/_/g, " ");
-    if (name === w || sym === w || name.replace(/ /g, "") === w.replace(/ /g, "")) return { brand: BRANDS[k], exact: true };
-    if ((" " + name + " ").indexOf(" " + w + " ") >= 0) return { brand: BRANDS[k], exact: false };
+  const name = brandKey(b.name), sym = brandKey(b.symbol);
+  for (const w of Object.keys(BRANDS)) {
+    if (name === w || sym === w || name.replace(/ /g, "") === w.replace(/ /g, "")) return { brand: BRANDS[w], exact: true };
+    if ((" " + name + " ").indexOf(" " + w + " ") >= 0) return { brand: BRANDS[w], exact: false };
   }
   return null;
 }
