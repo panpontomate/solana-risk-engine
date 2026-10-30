@@ -114,6 +114,40 @@ export const BRAND_MATURE_DAYS = 30;
 export const BRAND_MATURE_LIQ = 100000;
 export const BRANDS = Object.fromEntries(BRAND_NAMES.map(function (n) { return [brandKey(n), n]; }));
 
+// Official tokens put on Solana by exchanges and by Socios.com, by mint address (a copy always has another
+// address). They are bought and sold mostly on their exchange, so Solana pools are tiny and the issuer's
+// custody wallet holds most of the supply: read as a stranger's token that gave HIGH (bnSOL, the Barcelona
+// fan token). They are shown as dependency on the issuer, like ISSUERS below
+export const OFFICIAL_TOKENS = {
+  BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85: "Binance",   // Binance Staked SOL
+  Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B: "Bybit",   // Bybit Staked SOL
+  bgSoLfRx1wRPehwC9TyG568AGjnf1sQG1MYa8s3FbfY: "Bitget",   // Bitget Staked SOL
+  "7cBuurYDdaqxnem7KyMTci6SWhjJKroZ6NUjqH2ewEPB": "MEXC",   // MEXC Staked SOL
+  CDCSoLckzozyktpAp9FWT3w92KFJVEUxAU7cNu2Jn3aX: "Crypto.com",   // Crypto.com Staked SOL
+  FDLkS4zH5rGmD7q7qGfzhmzPgQJ88jcX1JFT5nfdNTjg: "Socios.com (Chiliz)",   // Olympique de Marseille Fan Token
+  BjXGwMnWWUkS9JrXEkkamszu4oX8oqo3kNqFr3ifNk1F: "Socios.com (Chiliz)",   // Napoli Fan Token
+  BX8VbHBf8DUHeGJjJsSW2HCviGyQSF5SVCEnN7vXUkwM: "Socios.com (Chiliz)",   // Argentine Football Association Fan Token
+  AiYi7HyVVXnDSuj8BoPirDsuuWgddeKkD5MQN35VpwNz: "Socios.com (Chiliz)",   // Portugal National Team Fan Token
+  HD9i9C2Pw6hWXm354i3SWkYG8ZtfikUJn2bNPzwQZcEK: "Socios.com (Chiliz)",   // SL Benfica Fan Token
+  cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij: "Coinbase",   // Coinbase Wrapped BTC
+  gtBTCGWvSRYYoZpU9UZj6i3eUGUpgksXzzsbHk2K9So: "Gate",   // Gate Wrapped BTC
+  CtzPWv73Sn1dMGVU3ZtLv9yWSyUAanBni19YWDaznnkn: "OKX",   // OKX Wrapped BTC
+  BtjXf3LA7Z3jxAcQkKUqKYpLFS5B7GuB7pfjzeas1tdB: "Socios.com (Chiliz)",   // OG Fan Token
+  "6VdpC1hcx7byFtJ5M6Xhspa6Uup5rZHruzXvuJhXAyXm": "Socios.com (Chiliz)",   // Atletico Madrid Fan Token
+  EDzhmkPa5gToYGowjH66xycCRgPmfWNzfqpXdCzsYb8M: "Socios.com (Chiliz)",   // Galatasaray Fan Token
+  "82DNsTK61ZrgCHP6pfP32Eubcsp9h38d64E6X9ETEBBe": "Socios.com (Chiliz)",   // FC Barcelona Fan Token
+  "5eyib4qghYGHNh7VvxSFGYLFJSanjq9hug9fR52kksnm": "Socios.com (Chiliz)",   // Paris Saint-Germain Fan Token
+  "3cVuTnMj8FeqK82PDgK4JzKnLP7LM6GauqTyqnxtcSk1": "Socios.com (Chiliz)",   // AS Roma Fan Token
+  HE6bLNs16qgQo2jVSMXDSCnxQahjdVrww7qQPrHrZtEw: "Socios.com (Chiliz)",   // Juventus Fan Token
+  "8WbNQtY7QmXMVKJFTSqFudierVZZtbuoyeepZEqJ1B2w": "Socios.com (Chiliz)",   // Manchester City Fan Token
+  H5qGPniSX2uCNtAnxr7RpdfFAZcGkr6dknjgpa1AKHe1: "Socios.com (Chiliz)",   // AC Milan Fan Token
+  Dst93spXQEXxFzwYbFrQRnFYBYpw7AzB2QyALEeP4NGQ: "Socios.com (Chiliz)",   // Arsenal Fan Token
+  HagS3VmAuhx5QJnHcuMAJF4wwVDE58CiX5SFZCYFrVe: "Socios.com (Chiliz)",   // Inter Milan Fan Token
+  AMnbxhGifp3gm2YsNwmfcF2ZCLsZN6iP3LdzBPZgGpzW: "Socios.com (Chiliz)",   // Trabzonspor Fan Token
+  GDNoEjfSAUAvManoEaT3vStGcvwKkcUcSTvUwfvwhqXf: "Socios.com (Chiliz)",   // Tottenham Hotspur FC Fan Token
+  FG44Jffowai8hqQifkwtNLbADkH3EjG5txMc54yaJ4cN: "Socios.com (Chiliz)",   // UFC Fan Token
+};
+
 // Known issuers of tokenized assets: every key that controls their tokens (mint, freeze, permanent delegate,
 // hook, pause, scaling). A token is theirs only if ALL its control keys are in the list, so copying one key
 // (anyone can hand the mint authority to someone else's wallet) is not enough. Their control is the point of

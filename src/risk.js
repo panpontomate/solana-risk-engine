@@ -1,4 +1,4 @@
-import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, ISSUERS } from "./constants.js";
+import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, ISSUERS, OFFICIAL_TOKENS } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
@@ -63,7 +63,8 @@ export function tokenType(info, pair, now) {
 /* ---------- known issuers ---------- */
 // Name of the known issuer that holds every control key of this mint, or null. Needs the extension keys
 // read by getMint (extKeys): without them a permanent delegate or a hook could belong to anyone
-export function issuerOf(info) {
+export function issuerOf(info, mint) {
+  if (mint && OFFICIAL_TOKENS[mint]) return OFFICIAL_TOKENS[mint];
   if (!info || !info.extKeys) return null;
   const keys = [info.mintAuth, info.freezeAuth].concat(info.extKeys).filter(Boolean);
   if (!keys.length) return null;
@@ -100,7 +101,7 @@ function mkLight(k, items, okSignal) {
 export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   now = now || Date.now();
   const ak = (info && info.authKind) || {};
-  const issuer = issuerOf(info);
+  const issuer = issuerOf(info, pair && pair.baseToken && pair.baseToken.address);
   let it;
 
   // 1) creator control
@@ -170,6 +171,11 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
     else if (rc.lpLockedPct < 60) it.push(sig("MKT_LP_PARTLY_LOCKED", "warn", { pct: rc.lpLockedPct }));
   }
   if (type === "BRIDGED" && liq < 50000 && it.length) it[0] = Object.assign({}, it[0], { data: Object.assign({}, it[0].data, { offSolana: true }) });
+  // an official token from an exchange or Socios trades mostly there: little liquidity on Solana is a
+  // warning (hard to sell here), not a sign of a token built to trap buyers
+  if (issuer && OFFICIAL_TOKENS[pair.baseToken && pair.baseToken.address]) it = it.map(function (x) {
+    return x.code === "MKT_LIQ_VERY_LOW" ? sig(x.code, "warn", Object.assign({}, x.data, { offSolana: true })) : x;
+  });
   const market = mkLight("market", it, sig("MKT_OK", "ok", { liq: liq, vol: vol }));
 
   // 4) dependency on an issuer or a bridge
@@ -239,7 +245,7 @@ export async function assess(client, mint, pair, opts) {
   const fresh = pair && !opts.skipCreator && (!pair.pairCreatedAt || Date.now() - pair.pairCreatedAt < 7 * DAY);
   const launchPromise = fresh ? creatorLaunches(client, mint) : Promise.resolve(null);
   // Copies of the same name and ticker: one search per token, so only when asked (a single token, not a wallet)
-  const copiesPromise = pair && opts.copies ? copiesOf(client, mint, pair).catch(function (e) { if (isCancel(e)) throw e; return null; }) : Promise.resolve(null);
+  const copiesPromise = pair && opts.copies && !OFFICIAL_TOKENS[mint] ? copiesOf(client, mint, pair).catch(function (e) { if (isCancel(e)) throw e; return null; }) : Promise.resolve(null);
   let info = null, conc = null;
   try { info = await getMint(client, mint); } catch (e) { if (isCancel(e)) throw e; }
   if (info && info.decimals === 0 && info.supply === 1) return null;   // NFT
@@ -262,12 +268,13 @@ export async function assess(client, mint, pair, opts) {
     type = tokenType(info, pair);
     lights = buildLights(info, conc, pair, value, type, rc, null, launches);
     imp = impostorOf(mint, pair);
-    const brand = imp ? null : brandOf(pair, type);
+    const official = !!OFFICIAL_TOKENS[mint];
+    const brand = imp || official ? null : brandOf(pair, type);
     // copying a famous token, a real company or an older token with the same name and ticker
     const front = [];
     if (imp) front.push(sig("IMPOSTOR", "bad", { symbol: imp.sym, real: imp.real }));
     if (brand) front.push(sig(brand.exact ? "BRAND_COPY" : "BRAND_NAME", brand.exact ? "bad" : "warn", { brand: brand.brand }));
-    if (copies && !imp) {
+    if (copies && !imp && !official) {
       const strong = copies.origLiq >= 50000 && copies.origLiq >= 10 * Math.max(copies.liq, 1);
       front.push(sig("COPYCAT", strong ? "bad" : "warn", copies));
     }
@@ -282,6 +289,8 @@ export async function assess(client, mint, pair, opts) {
   } else {
     const s = score(info);
     pts = s.pts; reasons = s.why; lvl = pts >= 25 ? "SPAM" : "NO_MARKET";
+    // an official token with no Solana pool (bgSOL trades on Bitget) is not spam: its issuer mints it
+    if (OFFICIAL_TOKENS[mint]) { pts = 0; lvl = "NO_MARKET"; reasons = [sig("DEP_KNOWN_ISSUER", "warn", { issuer: OFFICIAL_TOKENS[mint] }), sig("NO_MARKET", "na")]; }
   }
   return {
     mint: mint, sym: base.symbol || short(mint), name: base.name || "", pts: pts, sev: sev,

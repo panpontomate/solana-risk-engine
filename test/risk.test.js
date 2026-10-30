@@ -237,3 +237,20 @@ test("creator track record thresholds", () => {
   assert.equal(h(10, 9).s, "warn");          // one of ten took off: better than chance, not red
   assert.equal(buildLights(i, goodConc, p, 0, "OPEN", null, NOW, null)[0].items.some((x) => x.code === "CTL_CREATOR_HISTORY"), false);
 });
+
+test("official exchange and fan tokens: dependency on the issuer, thin Solana market only yellow", () => {
+  const bar = "82DNsTK61ZrgCHP6pfP32Eubcsp9h38d64E6X9ETEBBe", ms = "ELF7j7Uko8Qm9kncmzgEJtoRbSoQPeGzAUTLa7ukFAfb";
+  const i = { mintAuth: ms, freezeAuth: ms, authKind: { [ms]: "program" }, ext: [], extKeys: [] };
+  const p = { baseToken: { address: bar, symbol: "BAR", name: "FC Barcelona Fan Token" }, liquidity: { usd: 3 }, volume: { h24: 0 }, pairCreatedAt: NOW - 300 * 86400000 };
+  const custody = { ok: true, w1: 81, w10: 93, prog: 6, nW: 6 };
+  const l = buildLights(i, custody, p, 0, "BRIDGED", null, NOW);
+  assert.equal(l[0].items[0].code, "CTL_KNOWN_ISSUER");
+  assert.equal(l[0].items[0].data.issuer, "Socios.com (Chiliz)");
+  assert.equal(l[2].items[0].code, "MKT_LIQ_VERY_LOW");
+  assert.equal(l[2].s, "warn");
+  assert.equal(l[3].items[0].code, "DEP_KNOWN_ISSUER");
+  assert.equal(levelFrom(l).lvl, "MEDIUM");
+  // the same token at another address is a stranger's token: still HIGH
+  const fake = Object.assign({}, p, { baseToken: Object.assign({}, p.baseToken, { address: "FAKE111111111111111111111111111111111111111" }) });
+  assert.equal(levelFrom(buildLights(i, custody, fake, 0, "BRIDGED", null, NOW)).lvl, "HIGH");
+});

@@ -30,6 +30,8 @@ for (const l of r.lights)  // the four traffic lights
 | **Unlocked LP** | % of LP locked/burned via RugCheck. It only counts for markets under 90 days old, so veteran tokens don't get false positives, and never while a token is on Pump.fun's bonding curve, where there is no LP to pull. |
 | **Serial creators** | For markets under 7 days: how many other tokens the creator launched in the last 24 h (RugCheck). 2 or more is a warning, 5 or more a red flag. `recentLaunches(client, wallet)` counts the same on chain for the wallet that *paid* a launch, which catches farms that name a fresh creator each time. |
 | **Impostors** | Tokens using the symbol or name of a famous token (USDC, JUP, BONK, WIF, BTC, ETH...) with a different address. |
+| **Real brands** | About 320 real companies with no token on Solana (Spotify, Nike, Zara, Ferrari...). A token called just that is a red flag and **HIGH**; the brand as one word of a longer name is a warning. Everyday words that are also brands (Shell, Target, Puma) are left out, and markets at least 30 days old with $100k+ liquidity are not checked. |
+| **Known issuers and official tokens** | Tokenized shares from xStocks (recognised by their control keys) and official tokens from exchanges and Socios.com (bnSOL, bbSOL, cbBTC, club fan tokens..., by mint address) are shown as dependency on the issuer. Their Solana pools are often tiny because they trade on the exchange: that is a warning, not a red flag. |
 | **Token type** | `STABLE`, `TOKENIZED`, `BRIDGED`, `CREATOR`, `OPEN`. Each type is judged by the rules that fit it: a bridged token normally has a program as mint authority, a memecoin does not. |
 | **Bots and exchanges** | Wallets that made 200 transactions in under 2 days are marked `active` and are not counted as whales. |
 | **Funder clusters** | The fee payer of each holder's *first* transaction reveals who created it. Holders sharing a funder are grouped, since that is often one team splitting the supply. Exchange hot wallets are excluded as sources. |
@@ -45,7 +47,7 @@ for (const l of r.lights)  // the four traffic lights
 - Otherwise the level is **LOW**, with two exceptions that raise it to **MEDIUM**:
   - **A check could not run.** Lights that could not be checked are marked `na`, and they never count as "fine". `dataOnly(r)` tells you when this is the only reason.
   - **The market is under 7 days old.** It has no track record yet.
-- An impostor of a famous token is always **HIGH**.
+- An impostor of a famous token, or a token named just like a real company, is always **HIGH**.
 
 A single yellow on an established token stays LOW, because those warnings are normal for its type (a staking pool's program-controlled mint, for example). This was measured on 62 real tokens: the 7-day rule moved 9 brand-new tokens from low to medium and no established one.
 
