@@ -112,6 +112,10 @@ const BRAND_NAMES = [
 // market at least this old AND this deep is not checked for brand names
 export const BRAND_MATURE_DAYS = 30;
 export const BRAND_MATURE_LIQ = 100000;
+// COPYCAT: the token taken as the original must be a real market. Farms relaunch the same name and ticker
+// many times a day, so the "oldest" is often another dead copy from an hour ago (registry 29/10: 209 of 320
+// new tokens flagged). Below this liquidity the older token is not something worth copying
+export const COPY_MIN_LIQ = 10000;
 export const BRANDS = Object.fromEntries(BRAND_NAMES.map(function (n) { return [brandKey(n), n]; }));
 
 // Official tokens put on Solana by exchanges and by Socios.com, by mint address (a copy always has another

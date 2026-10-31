@@ -43,7 +43,7 @@ export default {
     CTL_SERIAL_CREATOR: (d) => "El creador ha lanzado " + d.n + " tokens más en las últimas 24 h (según RugCheck): es un lanzador en serie, que suele abandonar cada token en cuanto llegan compradores",
     BRAND_COPY: (d) => "Usa el nombre de " + d.brand + ", una empresa real que no tiene token en Solana: no es oficial, casi seguro una imitación para atraer compradores",
     BRAND_NAME: (d) => "Usa el nombre de " + d.brand + ", una empresa real: no es un token oficial de " + d.brand,
-    COPYCAT: (d) => "Hay " + (d.n === 1 ? "otro token" : d.n + " tokens más") + " con el mismo nombre y ticker; el más antiguo (" + short(d.original) + ", de hace " + d.days + (d.days === 1 ? " día" : " días") + ") no es este: comprueba que tienes la dirección correcta",
+    COPYCAT: (d) => "Hay " + (d.n === 1 ? "otro token" : d.n + " tokens más") + " con el mismo nombre y ticker; el más antiguo con mercado real (" + short(d.original) + ", de hace " + d.days + (d.days === 1 ? " día" : " días") + ") no es este: comprueba que tienes la dirección correcta",
     HOLD_GROUP: (d) => d.n + " holders recibieron su primer SOL de la misma wallet y juntos tienen el " + pct(d.pct) + " del suministro: probablemente son la misma persona o equipo",
     CTL_CREATOR_HISTORY: (d) => "De los " + d.old + " tokens que el creador lanzó antes (hace más de 24 h), " + d.dead + " se quedaron por debajo de 10.000 $ de capitalización (según RugCheck): sus lanzamientos no suelen despegar",
     IMPOSTOR: (d) => "Se hace pasar por " + d.symbol + ": el " + d.symbol + " de verdad tiene otra dirección (" + short(d.real) + "). Es una copia, casi seguro una estafa",

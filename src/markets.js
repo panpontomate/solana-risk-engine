@@ -1,4 +1,4 @@
-import { DEX, DEX_SEARCH, GECKO, USDC, USDT, WSOL, FAMOUS, BRANDS, brandKey, BRAND_MATURE_DAYS, BRAND_MATURE_LIQ } from "./constants.js";
+import { DEX, DEX_SEARCH, GECKO, USDC, USDT, WSOL, FAMOUS, BRANDS, brandKey, BRAND_MATURE_DAYS, BRAND_MATURE_LIQ, COPY_MIN_LIQ } from "./constants.js";
 import { ScanError, isCancel } from "./errors.js";
 import { sleep } from "./util.js";
 
@@ -54,8 +54,9 @@ export function brandOf(pair, type, now) {
   return null;
 }
 
-// Other Solana tokens with the same name and symbol (DexScreener search). The oldest one is taken as
-// the original. Returns null when this token is the oldest or nothing else matches.
+// Other Solana tokens with the same name and symbol (DexScreener search). The oldest one with a real market
+// (COPY_MIN_LIQ) is taken as the original. Returns null when nothing else matches, when no older token has a
+// real market (relaunches of a dead name), when this token is the oldest, or when this one is the deeper market.
 export async function copiesOf(client, mint, pair, now) {
   const b = (pair && pair.baseToken) || {};
   if (!b.symbol) return null;
@@ -74,9 +75,11 @@ export async function copiesOf(client, mint, pair, now) {
   const mine = by[mint] || { addr: mint, liq: (pair.liquidity && pair.liquidity.usd) || 0, at: pair.pairCreatedAt || 0 };
   const others = Object.keys(by).filter(function (a) { return a !== mint; }).map(function (a) { return by[a]; });
   if (!others.length) return null;
-  const oldest = others.filter(function (o) { return o.at; }).sort(function (x, y) { return x.at - y.at; })[0];
+  const oldest = others.filter(function (o) { return o.at && o.liq >= COPY_MIN_LIQ; }).sort(function (x, y) { return x.at - y.at; })[0];
   // this token is itself the oldest (or the dates are unknown): it is the original, the others copy it
   if (!oldest || (mine.at && mine.at <= oldest.at)) return null;
+  // the market people actually use is this one (a relaunch or migration is not a trap)
+  if (mine.liq >= oldest.liq) return null;
   return { n: others.length, original: oldest.addr, days: Math.floor(((now || Date.now()) - oldest.at) / 86400000), origLiq: oldest.liq, liq: mine.liq };
 }
 
