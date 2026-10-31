@@ -11,7 +11,7 @@ test("Spanish texts match the original scanner", () => {
     "La mayor wallet individual tiene el 40% y las 10 mayores el 80% del supply. Los pools y programas guardan el 25%");
   assert.equal(describe({ code: "CON_OK", data: { w1: 3, prog: 5 } }, "es"), "Sin concentración preocupante (mayor wallet individual: 3%)");
   assert.equal(describe({ code: "IMPOSTOR", data: { symbol: "BONK", real: FAMOUS.BONK } }, "es"),
-    "Se hace pasar por BONK: el BONK de verdad tiene otra dirección (DezX…B263). Es una copia, casi seguro una estafa");
+    "Usa el nombre BONK, pero no es el BONK original (ese tiene otra dirección: DezX…B263). Comprueba que es el token que buscas");
   assert.equal(describe({ code: "MKT_LIQ_LOW", data: { liq: 20000, offSolana: true } }, "es"),
     "Liquidez baja (20.000 $) y su mercado principal puede estar fuera de Solana");
 });

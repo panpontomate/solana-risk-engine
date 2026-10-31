@@ -43,7 +43,7 @@ export default {
     COPYCAT: (d) => "There " + (d.n === 1 ? "is another token" : "are " + d.n + " more tokens") + " with the same name and ticker; the oldest one with a real market (" + short(d.original) + ", " + d.days + (d.days === 1 ? " day" : " days") + " old) is not this one: check you have the right address",
     HOLD_GROUP: (d) => d.n + " holders got their first SOL from the same wallet and together hold " + pct(d.pct) + " of the supply: most likely one person or team",
     CTL_CREATOR_HISTORY: (d) => "Of the " + d.old + " tokens the creator launched before (over 24 h ago), " + d.dead + " stayed under $10,000 market cap (per RugCheck): their launches rarely take off",
-    IMPOSTOR: (d) => "Impersonates " + d.symbol + ": the real " + d.symbol + " has another address (" + short(d.real) + "). It is a copy, almost certainly a scam",
+    IMPOSTOR: (d) => "Uses the name " + d.symbol + ", but it is not the original " + d.symbol + " (that one has another address: " + short(d.real) + "). Make sure it is the token you want",
 
     CON_SKIPPED: () => "Holder concentration not checked",
     CON_UNAVAILABLE: () => "Could not check holder concentration (the service did not answer; try again in a while)",
