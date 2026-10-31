@@ -31,20 +31,55 @@ export async function holderBase(client, mint, onProgress) {
 // People's wallets rarely move hundreds of transactions in a couple of days; exchanges, bots and
 // market makers do. Checked with the last 200 signatures. Marks them kind[o] = "active" (mutates kind)
 // and returns {address: hours it took to do those 200}.
+// Signatures also list what a wallet only RECEIVES (fee shares, airdrops, dust), so before calling it busy
+// a few of those transactions are read: if it signed none, it is a quiet wallet that gets paid, not a bot
+// (31/10: the 60% holder of a pump.fun quote token got ~1,500 fee shares an hour and signed nothing).
+// Those stay "wallet" and are listed in busy.passive (not enumerable) as {address: true}.
 export async function markBusy(client, kind, wallets, onStep) {
-  const busy = {};
+  const busy = {}, passive = {};
+  Object.defineProperty(busy, "passive", { value: passive });
   let chk = 0;
   await pool(wallets, 3, async function (o) {
     try {
       const sg = await client.rpc("getSignaturesForAddress", [o, { limit: 200 }]);
       if (sg && sg.length >= 200) {
         const t1 = sg[0].blockTime, t0 = sg[sg.length - 1].blockTime;
-        if (t1 && t0 && (t1 - t0) < 2 * 86400) { kind[o] = "active"; busy[o] = Math.max(1, Math.round((t1 - t0) / 3600)); }
+        if (t1 && t0 && (t1 - t0) < 2 * 86400) {
+          if (await onlyReceives(client, o, sg)) passive[o] = true;
+          else { kind[o] = "active"; busy[o] = Math.max(1, Math.round((t1 - t0) / 3600)); }
+        }
       }
     } catch (e) { if (isCancel(e)) throw e; }
     chk++; if (onStep) onStep(chk, wallets.length);
   });
   return busy;
+}
+
+// How many of the busy list's transactions are read to tell a wallet that acts from one that only receives
+export const PASSIVE_SAMPLE = 4;
+
+function signers(tx) {
+  const m = tx && tx.transaction && tx.transaction.message;
+  const keys = (m && m.accountKeys) || [];
+  if (keys.length && typeof keys[0] === "object") return keys.filter(function (k) { return k.signer; }).map(function (k) { return k.pubkey; });
+  const n = (m && m.header && m.header.numRequiredSignatures) || 1;   // raw format: signers come first
+  return keys.slice(0, n);
+}
+
+// true only when at least 2 of the sampled transactions could be read and the wallet signed none of them
+export async function onlyReceives(client, o, sg) {
+  const idx = [];
+  for (let i = 0; i < PASSIVE_SAMPLE; i++) idx.push(Math.round(i * (sg.length - 1) / Math.max(1, PASSIVE_SAMPLE - 1)));
+  let read = 0;
+  for (const i of uniq(idx)) {
+    let tx = null;
+    try { tx = await client.rpc("getTransaction", [sg[i].signature, { maxSupportedTransactionVersion: 1, encoding: "jsonParsed" }]); }
+    catch (e) { if (isCancel(e)) throw e; }
+    if (!tx) continue;
+    read++;
+    if (signers(tx).indexOf(o) >= 0) return false;
+  }
+  return read >= 2;
 }
 
 /* ---------- wallets funded from the same source (maybe one owner split into several accounts) ---------- */
@@ -156,6 +191,7 @@ export function holderRows(b, busy) {
   b.largest.forEach(function (a, i) {
     const o = b.owners[i] || a.address;
     if (!agg[o]) agg[o] = { owner: o, kind: b.kind[o] || "program", raw: 0, busy: busy[o] || 0 };
+    if (busy.passive && busy.passive[o]) agg[o].passive = true;   // very busy, but only receiving
     agg[o].raw += Number(a.amount);
   });
   const price = Number((b.pair && b.pair.priceUsd) || 0);

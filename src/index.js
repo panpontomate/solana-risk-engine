@@ -51,7 +51,7 @@ export { rugcheckSummary, rugcheckReport, rugcheckGraph, netBalances, creatorLau
 export { score, issuerOf, tokenType, buildLights, levelFrom, dataOnly, reasonsFrom, assess, SERIAL_WARN, SERIAL_BAD, HISTORY_MIN, HISTORY_WARN, HISTORY_BAD_MIN, HISTORY_BAD } from "./risk.js";
 export { recentLaunches } from "./launch.js";
 export { analyzeToken, analyzeWallet, analyzeAddress, sortResults } from "./wallet.js";
-export { holderBase, markBusy, findFunder, findFunders, clusterByFunder, holderRows, creatorInfo, analyzeHolders,
+export { holderBase, markBusy, onlyReceives, PASSIVE_SAMPLE, findFunder, findFunders, clusterByFunder, holderRows, creatorInfo, analyzeHolders,
   perHour, sourceRates, groupList, EXCHANGE_PER_HOUR, YOUNG_DAYS, HOLD_GROUP_YOUNG, HOLD_GROUP_MATURE } from "./holders.js";
 export { fetchSwaps, solHistory, priceSeries, parseTrades, pnlFromTrades, pnlStatus, estimatePnl } from "./pnl.js";
 export { capSnap, chgDiff, chgAgg, takeSnapshots, diffSnapshots } from "./changes.js";

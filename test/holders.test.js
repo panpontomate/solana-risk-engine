@@ -144,6 +144,22 @@ test("markBusy only flags 200 signatures within 2 days", async () => {
   assert.equal(kind[slow], "wallet");
 });
 
+test("markBusy keeps wallets that only receive (fee shares, airdrops) as wallets", async () => {
+  const gets = addr("gets"), acts = addr("acts"), blind = addr("blind"), OTHER = addr("other");
+  const tx = (signer) => ({ transaction: { message: { accountKeys: [{ pubkey: signer, signer: true }, { pubkey: gets, signer: false }, { pubkey: acts, signer: false }] } } });
+  const txs = {};
+  for (let i = 0; i < 200; i++) { txs["g-" + i] = tx(OTHER); txs["a-" + i] = tx(i === 133 ? acts : OTHER); }
+  const f = fakeChain({ sigs: { [gets]: sigsOver("g", 200, 3600), [acts]: sigsOver("a", 200, 3600), [blind]: sigsOver("b", 200, 3600) }, txs });
+  const c = createClient({ rpcUrl: OWN, fetch: f, retryDelayMs: 0 });
+  const kind = { [gets]: "wallet", [acts]: "wallet", [blind]: "wallet" };
+  const busy = await markBusy(c, kind, [gets, acts, blind]);
+  assert.equal(kind[gets], "wallet");               // 200 in an hour, but it signed none of them
+  assert.deepEqual(busy.passive, { [gets]: true });
+  assert.equal(kind[acts], "active");               // it signed one of the sampled ones: it acts
+  assert.equal(kind[blind], "active");              // nothing could be read: keep the old answer
+  assert.deepEqual(Object.keys(busy).sort(), [acts, blind].sort());
+});
+
 test("rugcheckGraph and netBalances tolerate missing data", async () => {
   const c = createClient({ rpcUrl: OWN, fetch: fakeChain({}), retryDelayMs: 0 });
   assert.equal(await rugcheckGraph(c, M), null);
