@@ -1,0 +1,50 @@
+# Publica el motor en npm al subir una etiqueta de versión (por ejemplo v0.4.6), sin token ni 2FA a mano:
+# npm confía en este workflow (Trusted Publishing, configurado en npmjs.com > solana-risk-engine > Settings) y le da
+# permiso solo para esta publicación. npm añade además la procedencia (provenance): enlace público a este commit y ejecución.
+#
+# Para sacar versión: subir "version" en package.json, commit, y luego
+#   git tag v0.4.6 && git push && git push origin v0.4.6
+# La etiqueta tiene que coincidir con package.json; si no, o si fallan los tests, no se publica nada.
+name: publicar
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+  id-token: write          # lo que necesita Trusted Publishing
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: npm reciente (Trusted Publishing necesita 11.5.1 o más)
+        run: npm install -g npm@latest --no-audit --no-fund && npm --version
+      - name: La etiqueta coincide con package.json y esa versión no está ya en npm
+        run: |
+          V=$(node -p "require('./package.json').version")
+          [ "v$V" = "$GITHUB_REF_NAME" ] || { echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con package.json ($V)"; exit 1; }
+          if npm view "solana-risk-engine@$V" version >/dev/null 2>&1; then echo "::error::La versión $V ya está publicada en npm"; exit 1; fi
+          echo "Voy a publicar $V"
+      - run: npm test
+      - name: Publicar en npm
+        run: npm publish --access public
+      - name: Esperar a que npm la muestre
+        run: |
+          V=$(node -p "require('./package.json').version")
+          for i in $(seq 1 40); do
+            if npm view "solana-risk-engine@$V" version >/dev/null 2>&1; then
+              echo "Publicada: https://www.npmjs.com/package/solana-risk-engine/v/$V"
+              echo "Ojo: no pedir la URL de jsDelivr hasta unos minutos después (si la pide antes de tiempo guarda un 404)."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::warning::npm aún no muestra $V después de 10 minutos; a veces tarda más, mirar en npmjs.com"
