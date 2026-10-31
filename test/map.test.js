@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createClient, connectionMap, perHour, walletType, mapGroups, topHub, mapSignals, allHolders,
+import { createClient, connectionMap, perHour, walletType, mapType, mapGroups, topHub, mapSignals, allHolders,
   EXCHANGE_PER_HOUR, MAP_HUB, SYSTEM_PROGRAM, TOKEN_PROGRAM, createScanner, describe } from "../src/index.js";
 import { fakeChain, addr, pairOf, sigsOver } from "./fakechain.js";
 
@@ -130,4 +130,20 @@ test("whales: a distributor doing ~50 transactions an hour now forms a group (it
   assert.equal(h.clusters[P1] && h.clusters[P1].funder, DIST);
   assert.equal(h.clusters[P2].id, h.clusters[P1].id);
   assert.equal(h.hotGroups, 0);
+});
+
+test("mapType: a busy wallet that only receives is a person, not a bot or an exchange (0.4.7 rule)", async () => {
+  const gets = addr("map-gets"), acts = addr("map-acts"), OTHER = addr("map-other");
+  const tx = (signer) => ({ transaction: { message: { accountKeys: [{ pubkey: signer, signer: true }, { pubkey: gets, signer: false }, { pubkey: acts, signer: false }] } } });
+  const txs = {};
+  for (let i = 0; i < 1000; i++) { txs["mg-" + i] = tx(OTHER); txs["ma-" + i] = tx(i === 333 ? acts : OTHER); }
+  const c = createClient({ rpcUrl: OWN, fetch: fakeChain({ txs }), retryDelayMs: 0 });
+  const g = sigsOver("mg", 1000, 3600), a = sigsOver("ma", 1000, 3600);
+  const rate = perHour(g);
+  assert.ok(rate > EXCHANGE_PER_HOUR);                                    // by rate alone it would be an exchange
+  assert.deepEqual(await mapType(c, gets, "wallet", rate, g), { type: "person", passive: true });
+  assert.deepEqual(await mapType(c, acts, "wallet", rate, a), { type: "exchange", passive: false });
+  assert.deepEqual(await mapType(c, gets, "wallet", 1, g), { type: "person", passive: false });   // quiet: nothing read
+  assert.deepEqual(await mapType(c, gets, "program", rate, g), { type: "pool", passive: false });
+  assert.deepEqual(await mapType(c, addr("map-blind"), "wallet", rate, sigsOver("mb", 1000, 3600)), { type: "exchange", passive: false }); // unreadable: keep old answer
 });

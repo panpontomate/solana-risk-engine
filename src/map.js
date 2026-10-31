@@ -1,7 +1,7 @@
 import { ADDRESS_RE, TOKEN_PROGRAM, TOKEN_2022, RUGCHECK } from "./constants.js";
 import { ScanError, isCancel } from "./errors.js";
 import { pool, progress, uniq } from "./util.js";
-import { holderBase, EXCHANGE_PER_HOUR, perHour, sourceRates } from "./holders.js";
+import { holderBase, EXCHANGE_PER_HOUR, perHour, sourceRates, onlyReceives } from "./holders.js";
 export { EXCHANGE_PER_HOUR, perHour, sourceRates };
 import { accountKinds } from "./tokens.js";
 import { rugcheckReport } from "./rugcheck.js";
@@ -41,6 +41,16 @@ export function walletType(kind, rate) {
   return "person";
 }
 
+// walletType, but a busy wallet that signed none of the sampled transactions only RECEIVES (fee shares,
+// airdrops, dust): it is a person who gets paid, not a bot or an exchange (same rule as markBusy, 0.4.7).
+// Returns { type, passive }.
+export async function mapType(client, addr, kind, rate, sigs) {
+  const type = walletType(kind, rate);
+  if ((type === "bot" || type === "exchange") && kind !== "active" && sigs && sigs.length >= 2 &&
+      await onlyReceives(client, addr, sigs)) return { type: "person", passive: true };
+  return { type: type, passive: false };
+}
+
 // Every token account of the mint (own RPC only), summed by owner, largest first. Reads just the owner
 // and amount of each account. Returns null when the RPC refuses or the token is too big to list.
 export async function allHolders(client, mint, program, max) {
@@ -75,7 +85,7 @@ async function history(client, addr, pages) {
     if (page.length < 1000) { first = page[page.length - 1].signature; break; }
     before = page[page.length - 1].signature;
   }
-  return { rate: perHour(top), n: top ? top.length : 0, first: first };
+  return { rate: perHour(top), n: top ? top.length : 0, first: first, top: top };
 }
 // Fee payer (account 0) of a transaction
 async function payerOf(client, sig) {
@@ -188,7 +198,9 @@ export async function connectionMap(client, mint, opts) {
     try {
       if (h.kind !== "program") {
         const hs = await history(client, h.addr, mode === "young" ? 3 : 1);
-        h.rate = hs.rate; h.type = walletType(h.kind, hs.rate);
+        h.rate = hs.rate;
+        const t = await mapType(client, h.addr, h.kind, hs.rate, hs.top);
+        h.type = t.type; if (t.passive) h.passive = true;
         // in mature tokens only people are traced; exchanges never (they would join strangers)
         let first = hs.first;
         if (!first && mode === "mature" && h.type === "person" && hs.n >= 1000) first = (await history(client, h.addr, 3)).first;
