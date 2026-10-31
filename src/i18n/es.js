@@ -46,7 +46,7 @@ export default {
     COPYCAT: (d) => "Hay " + (d.n === 1 ? "otro token" : d.n + " tokens más") + " con el mismo nombre y ticker; el más antiguo con mercado real (" + short(d.original) + ", de hace " + d.days + (d.days === 1 ? " día" : " días") + ") no es este: comprueba que tienes la dirección correcta",
     HOLD_GROUP: (d) => d.n + " holders recibieron su primer SOL de la misma wallet y juntos tienen el " + pct(d.pct) + " del suministro: probablemente son la misma persona o equipo",
     CTL_CREATOR_HISTORY: (d) => "De los " + d.old + " tokens que el creador lanzó antes (hace más de 24 h), " + d.dead + " se quedaron por debajo de 10.000 $ de capitalización (según RugCheck): sus lanzamientos no suelen despegar",
-    IMPOSTOR: (d) => "Usa el nombre " + d.symbol + ", pero no es el " + d.symbol + " original (ese tiene otra dirección: " + short(d.real) + "). Comprueba que es el token que buscas",
+    IMPOSTOR: (d) => "No es el " + d.symbol + " original. Comprueba que es el token que buscas",
 
     CON_SKIPPED: () => "Sin comprobar la concentración de holders",
     CON_UNAVAILABLE: () => "No se pudo comprobar la concentración de holders (el servicio no respondió; prueba otra vez en un rato)",

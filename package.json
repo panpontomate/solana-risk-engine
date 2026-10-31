@@ -1,6 +1,6 @@
 {
   "name": "solana-risk-engine",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "description": "Explainable risk analysis for Solana tokens and wallets: creator control, real holder concentration, inflated liquidity, impostor tokens, funder clusters and PnL. Zero dependencies, runs in Node and the browser.",
   "type": "module",
   "main": "./src/index.js",
