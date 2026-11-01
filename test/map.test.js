@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createClient, connectionMap, perHour, walletType, mapType, mapGroups, topHub, mapSignals, allHolders,
-  EXCHANGE_PER_HOUR, RATE_MIN_SIGS, MAP_HUB, SYSTEM_PROGRAM, TOKEN_PROGRAM, createScanner, describe } from "../src/index.js";
-import { fakeChain, addr, pairOf, sigsOver } from "./fakechain.js";
+  EXCHANGE_PER_HOUR, RATE_MIN_SIGS, MAP_HUB, SYSTEM_PROGRAM, TOKEN_PROGRAM, createScanner, describe, getConc } from "../src/index.js";
+import { fakeChain, addr, pda, pairOf, sigsOver } from "./fakechain.js";
 
 const OWN = "https://rpc.example.test/";
 const NOW = 1_800_000_000_000;
@@ -79,6 +79,24 @@ test("a pump.fun-style bundle: fresh snipers funded by a one-use bundler still f
   assert.equal(m.sources[BUNDLER].type, "person");         // before: 144 an hour -> "exchange", group dropped
   assert.deepEqual(m.groups[0].members.sort(), [P1, P2].sort());
   assert.ok(m.signals.some((s) => s.code === "MAP_GROUP" && s.s === "bad"));
+});
+
+test("wallets emptied of SOL (no account) are people, not pools: traced, grouped and counted in concentration", async () => {
+  // 1/11 live (Leverhedge): 17 holders with 0.4% each and 0 SOL showed as 17 "pools" and were never traced
+  const E1 = addr("m-empty1"), E2 = addr("m-empty2"), VAULT = pda("m-vault");
+  const w = world({ sigs: { [E1]: [{ signature: "m-e1-first", blockTime: 1_790_000_000 }], [E2]: [{ signature: "m-e2-first", blockTime: 1_790_000_000 }] },
+    txs: { "m-e1-first": DIST, "m-e2-first": DIST } });
+  w.largest[M].push({ address: addr("m-ta7"), amount: 30, owner: E1 }, { address: addr("m-ta8"), amount: 30, owner: E2 },
+    { address: addr("m-ta9"), amount: 20, owner: VAULT });       // none of the three has an account (owners)
+  const m = await connectionMap(createClient({ rpcUrl: OWN, fetch: fakeChain(w), retryDelayMs: 0 }), M, { now: NOW, max: 20 });
+  const by = Object.fromEntries(m.holders.map((h) => [h.addr, h]));
+  assert.equal(by[E1].type, "person");
+  assert.equal(by[E1].funder, DIST);
+  assert.equal(by[VAULT].type, "pool");                    // off the curve: still a program
+  assert.deepEqual(m.groups[0].members.sort(), [P1, P2, BOT, E1, E2].sort());
+  const conc = await getConc(createClient({ rpcUrl: OWN, fetch: fakeChain(w), retryDelayMs: 0 }), M, 1000);
+  assert.equal(conc.nW, 7);                                // P1 P2 P3 BOT BIG + E1 E2 (POOL and VAULT left out)
+  assert.equal(Math.round(conc.w10), 42);                  // before: 36, the emptied wallets did not count
 });
 
 test("a young token: everyone is traced, a distributor's holders form a group, the hub and the group warn", async () => {

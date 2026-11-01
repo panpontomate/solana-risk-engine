@@ -178,7 +178,7 @@ export async function connectionMap(client, mint, opts) {
   let kind = b.kind;
   if (rows && rows.length) {
     const missing = rows.map(function (r) { return r.owner; }).filter(function (o) { return !kind[o]; });
-    if (missing.length) kind = Object.assign({}, kind, await accountKinds(client, missing, false));
+    if (missing.length) kind = Object.assign({}, kind, await accountKinds(client, missing, true));
   } else {
     const agg = {};
     b.largest.forEach(function (a, i) { const o = b.owners[i] || a.address; agg[o] = (agg[o] || 0) + Number(a.amount); });

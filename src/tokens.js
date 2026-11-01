@@ -115,7 +115,7 @@ export async function getConc(client, mint, supply) {
       return x && x.data && x.data.parsed && x.data.parsed.info && x.data.parsed.info.owner || null;
     });
     if (owners.some(function (o) { return !o; })) return out;
-    const kind = await accountKinds(client, uniq(owners), false);
+    const kind = await accountKinds(client, uniq(owners), true);   // emptied wallets (0 SOL) still count
     const agg = {};
     owners.forEach(function (o, i) { agg[o] = (agg[o] || 0) + amts[i]; });
     const ws = [];

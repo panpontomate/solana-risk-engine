@@ -24,7 +24,7 @@ export async function holderBase(client, mint, onProgress) {
   });
   const owned = uniq(owners.filter(Boolean));
   progress(onProgress, "kinds", 0.7);
-  const kind = await accountKinds(client, owned, false);
+  const kind = await accountKinds(client, owned, true);    // on the curve with no account: a wallet emptied of SOL
   return { mint: mint, info: info, pair: pair, largest: largest, owners: owners, uniq: owned, kind: kind };
 }
 
