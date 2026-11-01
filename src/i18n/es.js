@@ -52,6 +52,7 @@ export default {
     CON_UNAVAILABLE: () => "No se pudo comprobar la concentración de holders (el servicio no respondió; prueba otra vez en un rato)",
     CON_ALL_POOLS: (d) => "Casi todo el supply está en pools o programas" + prog(d),
     CON_OK: (d) => "Sin concentración preocupante (mayor wallet individual: " + pct(d.w1) + ")" + prog(d),
+    CON_TRUSTED: (d) => "No cuenta: en un token de " + d.issuer + " los grandes holders son su tesorería, custodios, exchanges y protocolos",
     CON_ISSUER: (d) => "La mayor wallet tiene el " + pct(d.w1) + " y las 10 mayores el " + pct(d.w10) + ": con un emisor verificado suelen ser su tesorería, custodios, exchanges o protocolos, no cuenta como riesgo" + prog(d),
     CON_HIGH: (d) => "La mayor wallet individual tiene el " + pct(d.w1) + " y las 10 mayores el " + pct(d.w10) + " del supply" + prog(d),
     CON_UNSPLIT: (d) => "No se pudo separar pools de personas. La mayor cuenta tiene el " + pct(d.top1) + " del supply",
@@ -69,6 +70,7 @@ export default {
     DEP_PROGRAM_AUTHORITY: () => "Un programa controla el mint o el freeze (puente o protocolo): hay que confiar en su código",
     DEP_PERMANENT_DELEGATE: () => "El emisor puede mover o quemar tus tokens (delegado permanente): confías en el emisor",
     DEP_STABLE_ISSUER: () => "Su valor depende de quien la emite y la respalda",
+    DEP_TRUSTED_ISSUER: (d) => "Lo emite " + d.issuer + ", un emisor regulado de los pocos que SolFlag considera de confianza. Como cualquier emisor, puede congelar o retirar tokens por orden legal",
     DEP_KNOWN_ISSUER: (d) => "Lo emite " + d.issuer + ": puede crear, congelar o mover tokens, como cualquier emisor regulado. Confías en el emisor",
     DEP_NONE: () => "No depende de un emisor ni de un puente"
   },

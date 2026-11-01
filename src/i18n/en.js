@@ -49,6 +49,7 @@ export default {
     CON_UNAVAILABLE: () => "Could not check holder concentration (the service did not answer; try again in a while)",
     CON_ALL_POOLS: (d) => "Almost all the supply is in pools or programs" + prog(d),
     CON_OK: (d) => "No worrying concentration (largest individual wallet: " + pct(d.w1) + ")" + prog(d),
+    CON_TRUSTED: (d) => "Not counted: in a token from " + d.issuer + " the large holders are its treasury, custodians, exchanges and protocols",
     CON_ISSUER: (d) => "The largest wallet holds " + pct(d.w1) + " and the top 10 hold " + pct(d.w10) + ": with a verified issuer these are usually its treasury, custodians, exchanges or protocols, so it does not count as a risk" + prog(d),
     CON_HIGH: (d) => "The largest individual wallet holds " + pct(d.w1) + " and the top 10 hold " + pct(d.w10) + " of the supply" + prog(d),
     CON_UNSPLIT: (d) => "Could not separate pools from people. The largest account holds " + pct(d.top1) + " of the supply",
@@ -66,6 +67,7 @@ export default {
     DEP_PROGRAM_AUTHORITY: () => "A program controls the mint or freeze (bridge or protocol): you have to trust its code",
     DEP_PERMANENT_DELEGATE: () => "The issuer can move or burn your tokens (permanent delegate): you trust the issuer",
     DEP_STABLE_ISSUER: () => "Its value depends on whoever issues and backs it",
+    DEP_TRUSTED_ISSUER: (d) => "Issued by " + d.issuer + ", one of the few regulated issuers SolFlag trusts. Like any issuer, it can freeze or claw back tokens under a legal order",
     DEP_KNOWN_ISSUER: (d) => "Issued by " + d.issuer + ": it can mint, freeze or move tokens, like any regulated issuer. You trust the issuer",
     DEP_NONE: () => "Does not depend on an issuer or a bridge"
   },

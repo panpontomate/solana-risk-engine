@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { issuerOf, tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, INFLATED_RATIO, USDC, WSOL, FAMOUS } from "../src/index.js";
+import { issuerOf, trustedIssuer, tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, INFLATED_RATIO, USDC, WSOL, FAMOUS } from "../src/index.js";
 
 const DAY = 86400000;
 const NOW = Date.UTC(2026, 9, 1);
@@ -145,9 +145,9 @@ test("a known issuer's tokenized share is not a creator who can rug", () => {
   assert.equal(issuerOf(i), "xStocks (Backed)");
   const lights = buildLights(i, xsConc, p, 0, tokenType(i, p, NOW), null, NOW);
   assert.deepEqual(lights[0].items, [{ code: "CTL_KNOWN_ISSUER", s: "ok", data: { issuer: "xStocks (Backed)" } }]);
-  assert.deepEqual(lights[3].items, [{ code: "DEP_KNOWN_ISSUER", s: "warn", data: { issuer: "xStocks (Backed)" } }]);
-  // custodians' and exchanges' share is shown, not counted (0.4.9; before it kept xStocks at MEDIUM)
-  assert.deepEqual([lights[1].s, lights[1].items[0].code], ["ok", "CON_ISSUER"]);
+  // on the trusted list (0.4.10): dependency and concentration green
+  assert.deepEqual(lights[3].items, [{ code: "DEP_TRUSTED_ISSUER", s: "ok", data: { issuer: "xStocks (Backed)" } }]);
+  assert.deepEqual([lights[1].s, lights[1].items[0].code], ["ok", "CON_TRUSTED"]);
   assert.equal(levelFrom(lights).lvl, "LOW");        // was HIGH (0.4.3), then MEDIUM (0.4.4-0.4.8)
   assert.equal(levelFrom(buildLights(i, goodConc, p, 0, "TOKENIZED", null, NOW)).lvl, "LOW");
 });
@@ -166,9 +166,15 @@ test("verified issuers past xStocks: PYUSD is Paxos, a 0% fee is no warning, its
   assert.equal(issuerOf(info({ mintAuth: "Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi", freezeAuth: "Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi", extKeys: [] })), "Tether");
   const l = buildLights(i, pxConc, p, 0, "STABLE", null, NOW);
   assert.deepEqual(l[0].items.map((x) => x.code), ["CTL_KNOWN_ISSUER"]);
-  assert.deepEqual([l[1].s, l[1].items[0].code], ["ok", "CON_ISSUER"]);
-  assert.deepEqual(l[3].items.map((x) => x.code), ["DEP_KNOWN_ISSUER", "DEP_STABLE_ISSUER"]);
+  // trusted (0.4.10): every light green, no generic stablecoin warning
+  assert.equal(trustedIssuer(i), "Paxos");
+  assert.deepEqual([l[1].s, l[1].items[0].code], ["ok", "CON_TRUSTED"]);
+  assert.deepEqual([l[3].s, l[3].items.map((x) => x.code)], ["ok", ["DEP_TRUSTED_ISSUER"]]);
+  assert.ok(l.every((x) => x.s === "ok"));
   assert.equal(levelFrom(l).lvl, "LOW");             // was MEDIUM with 7 warnings
+  // holders not read at all (from the browser USDC's often were not): still green, not "unchecked"
+  assert.ok(buildLights(i, null, p, 0, "STABLE", null, NOW).every((x) => x.s === "ok"));
+  assert.ok(buildLights(i, { skip: true }, p, 0, "STABLE", null, NOW).every((x) => x.s === "ok"));
   // a fee that is really charged still warns, issuer or not
   assert.ok(buildLights(pyusd({ feeBps: 50 }), pxConc, p, 0, "STABLE", null, NOW)[0].items.some((x) => x.code === "CTL_TRANSFER_FEE"));
   // fee not read (older callers): assume it is charged
@@ -178,6 +184,27 @@ test("verified issuers past xStocks: PYUSD is Paxos, a 0% fee is no warning, its
   assert.deepEqual([anon[1].s, anon[1].items[0].code], ["bad", "CON_HIGH"]);
   // someone else's key among Paxos's is not Paxos
   assert.equal(issuerOf(pyusd({ extKeys: [PX.ctl, "Scammer1"] })), null);
+});
+
+test("verified but not trusted: an exchange's official token keeps its dependency and concentration rules", () => {
+  // bnSOL (Binance) is recognised by mint address but is not on the trusted list
+  const BN = "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85";
+  const i = info({ mintAuth: "Pool1", freezeAuth: null, authKind: { Pool1: "program" } }), p = pair({ baseToken: { address: BN, symbol: "BNSOL", name: "Binance Staked SOL" } });
+  assert.equal(issuerOf(i, BN), "Binance");
+  assert.equal(trustedIssuer(i, BN), null);
+  const l = buildLights(i, pxConc, p, 0, "BRIDGED", null, NOW);
+  assert.deepEqual([l[3].s, l[3].items[0].code], ["warn", "DEP_KNOWN_ISSUER"]);
+  assert.deepEqual([l[1].s, l[1].items[0].code], ["ok", "CON_ISSUER"]);
+  assert.equal(buildLights(i, null, p, 0, "BRIDGED", null, NOW)[1].s, "na");   // unchecked stays unchecked
+});
+
+test("a verified issuer's dollar or euro token is a stablecoin even on a recent pair", () => {
+  const usdc = info({ mintAuth: "BJE5MMbqXjVwjAF7oxwPYXnTXDyspzZyt4vwenNw5ruG", freezeAuth: "7dGbd2QZcCKcTndnHcTL8q7SMVXAkp688NTQYwrRCrar", authKind: { BJE5MMbqXjVwjAF7oxwPYXnTXDyspzZyt4vwenNw5ruG: "program", "7dGbd2QZcCKcTndnHcTL8q7SMVXAkp688NTQYwrRCrar": "wallet" }, extKeys: [] });
+  const recent = (sym, name) => pair({ baseToken: { symbol: sym, name: name }, priceUsd: "1", liquidity: { usd: 1.6e6 }, pairCreatedAt: NOW - 3 * DAY });
+  assert.equal(tokenType(usdc, recent("USDC", "USD Coin"), NOW), "STABLE");      // was "BRIDGED"
+  assert.equal(tokenType(usdc, recent("EURC", "EURC"), NOW), "STABLE");
+  // the same young pair without an issuer is not given the benefit of the doubt
+  assert.notEqual(tokenType(info({ mintAuth: "Dev1", freezeAuth: null, authKind: {}, extKeys: [] }), recent("USDX", "USD X"), NOW), "STABLE");
 });
 
 test("a verified issuer's thin market on Solana is little liquidity, not inflated liquidity built to fool", () => {

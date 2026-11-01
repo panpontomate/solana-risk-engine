@@ -53,6 +53,9 @@ export function tokenType(info, pair, now) {
   // it needs a stable price, real liquidity and some time trading (otherwise a scammer only has to
   // name the token "USDX" and keep the price near $1 for a while)
   if (/USD|DOLLAR/i.test(sym) && price > 0.97 && price < 1.03 && liq >= 200000 && ageDays >= 30) return "STABLE";
+  // a verified issuer's dollar or euro token is a stablecoin whatever pair DexScreener found (USDC showed
+  // "bridged" because its pair as base token is recent)
+  if (/USD|DOLLAR|EUR/i.test(sym) && issuerOf(info, pair && pair.baseToken && pair.baseToken.address)) return "STABLE";
   if (info.ext.indexOf("permanentDelegate") >= 0) return "TOKENIZED";
   const walletAuth = (info.mintAuth && ak[info.mintAuth] !== "program") || (info.freezeAuth && ak[info.freezeAuth] !== "program");
   if (walletAuth) return "CREATOR";
@@ -70,6 +73,12 @@ export function issuerOf(info, mint) {
   if (!keys.length) return null;
   const found = ISSUERS.find(function (i) { return keys.every(function (k) { return i.keys.indexOf(k) >= 0; }); });
   return found ? found.name : null;
+}
+
+// Name of the issuer when it is on SolFlag's short trusted list, or null
+export function trustedIssuer(info, mint) {
+  const name = issuerOf(info, mint);
+  return name && ISSUERS.some(function (i) { return i.trusted && i.name === name; }) ? name : null;
 }
 
 // Extensions that only matter as they are set: a hook with no program and nobody able to add one does
@@ -102,6 +111,7 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   now = now || Date.now();
   const ak = (info && info.authKind) || {};
   const issuer = issuerOf(info, pair && pair.baseToken && pair.baseToken.address);
+  const trusted = issuer && trustedIssuer(info, pair && pair.baseToken && pair.baseToken.address);
   let it;
 
   // 1) creator control
@@ -133,7 +143,8 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   // 2) concentration in people (pools and programs do not count)
   let concentration;
   const soft = (type === "STABLE" || type === "TOKENIZED" || type === "BRIDGED");
-  if (conc && conc.skip) concentration = mkLight("concentration", [sig("CON_SKIPPED", "na")]);
+  if (trusted) concentration = mkLight("concentration", [sig("CON_TRUSTED", "ok", { issuer: issuer })]);
+  else if (conc && conc.skip) concentration = mkLight("concentration", [sig("CON_SKIPPED", "na")]);
   else if (!conc) concentration = mkLight("concentration", [sig("CON_UNAVAILABLE", "na")]);
   else if (conc.ok) {
     let st = "ok";
@@ -186,13 +197,14 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
 
   // 4) dependency on an issuer or a bridge
   it = [];
-  if (issuer) it.push(sig("DEP_KNOWN_ISSUER", "warn", { issuer: issuer }));
+  if (trusted) it.push(sig("DEP_TRUSTED_ISSUER", "ok", { issuer: issuer }));
+  else if (issuer) it.push(sig("DEP_KNOWN_ISSUER", "warn", { issuer: issuer }));
   else if (info) {
     if ((info.mintAuth && ak[info.mintAuth] === "program") || (info.freezeAuth && ak[info.freezeAuth] === "program"))
       it.push(sig("DEP_PROGRAM_AUTHORITY", "warn"));
     if (info.ext.indexOf("permanentDelegate") >= 0) it.push(sig("DEP_PERMANENT_DELEGATE", "warn"));
   }
-  if (type === "STABLE") it.push(sig("DEP_STABLE_ISSUER", "warn"));
+  if (type === "STABLE" && !trusted) it.push(sig("DEP_STABLE_ISSUER", "warn"));
   const dependency = mkLight("dependency", it, sig("DEP_NONE", "ok"));
 
   return [control, concentration, market, dependency];
@@ -259,7 +271,9 @@ export async function assess(client, mint, pair, opts) {
   if (info && pair && (info.mintAuth || info.freezeAuth)) {
     try { info.authKind = await getAuthKinds(client, info); } catch (e) { if (isCancel(e)) throw e; }
   }
-  if (info && pair && opts.skipConcentration) conc = { skip: true };
+  // a trusted issuer's holders are not checked (its treasury and exchanges; from the browser the public RPC
+  // often cannot list USDC's holders, which left it "unchecked" and medium)
+  if (info && pair && (opts.skipConcentration || trustedIssuer(info, mint))) conc = { skip: true };
   else if (info && pair) {
     // In tokens with millions of holders (BONK) getTokenLargestAccounts sometimes times out: a second try usually works
     for (let tryC = 0; tryC < 2 && !conc; tryC++) {

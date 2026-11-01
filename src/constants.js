@@ -157,7 +157,9 @@ export const OFFICIAL_TOKENS = {
 // (anyone can hand the mint authority to someone else's wallet) is not enough. Their control is the point of
 // the product: it is shown as dependency on the issuer, not as a creator who can rug
 export const ISSUERS = [
-  { name: "xStocks (Backed)", keys: [
+  // trusted: a short list SolFlag vouches for (1/11/2026: Circle, Paxos, Tether, xStocks): every light green,
+  // holders not checked. Other verified issuers and official tokens keep the dependency in yellow
+  { name: "xStocks (Backed)", trusted: true, keys: [
     "7pt9tkctJPK7PPNQJ77GKg8ZffSF6QxoMiCFYHxrtaCj",   // mint
     "JDq14BWvqCRFNu1krb12bcRpbGtJZ1FLEakMw6FdxJNs",   // freeze and pause (program)
     "5aMNNLQJwAEeoemTEMkv5NVjqKwvvefRYCQ5Z67HFvEq",   // permanent delegate, transfer hook, confidential transfers
@@ -165,14 +167,14 @@ export const ISSUERS = [
   ] },
   // Each mint below is listed by its issuer (URL); the keys are the ones those mints carry on-chain (1/11/2026).
   // An issuer is only added with an official page for its mints: FDUSD was left out for lack of one.
-  { name: "Paxos", keys: [
+  { name: "Paxos", trusted: true, keys: [
     // PYUSD 2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo  https://docs.paxos.com/guides/stablecoin/pyusd/mainnet
     // USDG  2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH  https://docs.paxos.com/guides/stablecoin/usdg/mainnet
     "AxJkHRY3puoofyj7Pn512M1SGBgWroXMkEdNPQypkzbu",   // PYUSD mint
     "2e99QgqSDtiJSi5omGRVeZJuqNFRZdpy2YgG3mBd1AB4",   // USDG mint
     "2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk"    // freeze, permanent delegate, hook, fee (both)
   ] },
-  { name: "Circle", keys: [
+  { name: "Circle", trusted: true, keys: [
     // USDC EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v, EURC HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr
     // https://developers.circle.com/stablecoins/usdc-contract-addresses , .../eurc-contract-addresses
     "BJE5MMbqXjVwjAF7oxwPYXnTXDyspzZyt4vwenNw5ruG",   // USDC mint
@@ -180,7 +182,7 @@ export const ISSUERS = [
     "Hy9168u7b2Toujh8SJKtKK8DWbyaBbXPzxm337R4o4XY",   // EURC mint
     "6FF2CPcL6fat16QVJH6W27DeBcX7TSqbwY3a5wtyVJLC"    // EURC freeze
   ] },
-  { name: "Tether", keys: [
+  { name: "Tether", trusted: true, keys: [
     // USDT Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB (FAMOUS.USDT)
     "Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi"     // USDT mint and freeze
   ] }
