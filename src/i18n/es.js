@@ -42,6 +42,7 @@ export default {
     CTL_NONE: () => "Sin autoridades activas: nadie puede crear más ni congelar",
     CTL_SERIAL_CREATOR: (d) => "El creador ha lanzado " + d.n + " tokens más en las últimas 24 h (según RugCheck): es un lanzador en serie, que suele abandonar cada token en cuanto llegan compradores",
     MAP_GROUP: (d) => d.n + " holders recibieron su primer SOL de la misma wallet y juntos tienen el " + pct(d.pct) + " del suministro: probablemente son la misma persona o equipo",
+    MAP_SWARM: (d) => d.n + " de los " + d.of + " mayores holders recibieron su primer SOL de la misma wallet (juntos tienen el " + pct(d.pct) + "): tantas wallets con el mismo origen suelen ser un reparto del equipo",
     MAP_HUB: (d) => "Una wallet ha repartido tokens a " + d.n + " wallets: el equipo suele dividir el suministro así para parecer más repartido",
     MAP_WHALE: (d) => "Una sola persona (que no es un exchange ni un pool) tiene el " + pct(d.pct) + " del suministro",
     BRAND_COPY: (d) => "Usa el nombre de " + d.brand + ", una empresa real que no tiene token en Solana: no es oficial, casi seguro una imitación para atraer compradores",

@@ -39,6 +39,7 @@ export default {
     CTL_NONE: () => "No active authorities: nobody can mint more or freeze",
     CTL_SERIAL_CREATOR: (d) => "The creator launched " + d.n + " other tokens in the last 24 h (per RugCheck): a serial launcher, who usually drops each token as soon as buyers arrive",
     MAP_GROUP: (d) => d.n + " holders got their first SOL from the same wallet and together hold " + pct(d.pct) + " of the supply: most likely one person or team",
+    MAP_SWARM: (d) => d.n + " of the " + d.of + " largest holders got their first SOL from the same wallet (together " + pct(d.pct) + "): this many wallets from one source is usually the team splitting its supply",
     MAP_HUB: (d) => "One wallet handed tokens to " + d.n + " wallets: teams often split the supply this way to look more spread out",
     MAP_WHALE: (d) => "A single person (not an exchange or a pool) holds " + pct(d.pct) + " of the supply",
     BRAND_COPY: (d) => "Uses the name of " + d.brand + ", a real company with no token on Solana: it is not official, almost certainly an imitation to draw buyers",

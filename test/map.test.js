@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createClient, connectionMap, perHour, walletType, mapType, mapGroups, topHub, mapSignals, allHolders,
-  EXCHANGE_PER_HOUR, RATE_MIN_SIGS, MAP_HUB, SYSTEM_PROGRAM, TOKEN_PROGRAM, createScanner, describe, getConc } from "../src/index.js";
+  EXCHANGE_PER_HOUR, RATE_MIN_SIGS, MAP_HUB, MAP_SWARM, SYSTEM_PROGRAM, TOKEN_PROGRAM, createScanner, describe, getConc } from "../src/index.js";
 import { fakeChain, addr, pda, pairOf, sigsOver } from "./fakechain.js";
 
 const OWN = "https://rpc.example.test/";
@@ -97,6 +97,31 @@ test("wallets emptied of SOL (no account) are people, not pools: traced, grouped
   const conc = await getConc(createClient({ rpcUrl: OWN, fetch: fakeChain(w), retryDelayMs: 0 }), M, 1000);
   assert.equal(conc.nW, 7);                                // P1 P2 P3 BOT BIG + E1 E2 (POOL and VAULT left out)
   assert.equal(Math.round(conc.w10), 42);                  // before: 36, the emptied wallets did not count
+});
+
+test("MAP_SWARM: many holders from one source warn even with a small share; no double warning", () => {
+  const hs = (n) => Array.from({ length: n }, (_, i) => ({ addr: "w" + i, pct: 0.4, type: "person", funder: "F" }));
+  const src = { F: { rate: 25, type: "person" } };
+  // 1/11 Leverhedge: 19 of 20 holders, 0.4% each -> 7.6%, under the 10% of MAP_GROUP
+  const leo = hs(19).concat([{ addr: "pool", pct: 5, type: "pool" }]);
+  const g = mapGroups(leo, src, "young");
+  assert.deepEqual(mapSignals({ mode: "young", groups: g, hub: null, holders: leo }).map((s) => [s.code, s.s, s.data.n, s.data.of]), [["MAP_SWARM", "bad", 19, 20]]);
+  assert.match(describe(mapSignals({ mode: "young", groups: g, hub: null, holders: leo })[0], "es"), /^19 de los 20 mayores holders recibieron su primer SOL de la misma wallet \(juntos tienen el 8%\)/);
+  assert.match(describe(mapSignals({ mode: "young", groups: g, hub: null, holders: leo })[0], "en"), /^19 of the 20 largest holders got their first SOL/);
+  // mature tokens: yellow
+  assert.deepEqual(mapSignals({ mode: "mature", groups: mapGroups(leo, src, "mature"), hub: null, holders: leo }).map((s) => [s.code, s.s]), [["MAP_SWARM", "warn"]]);
+  // one fewer than the limit: nothing
+  const few = hs(MAP_SWARM - 1);
+  assert.deepEqual(mapSignals({ mode: "young", groups: mapGroups(few, src, "young"), hub: null, holders: few }), []);
+  // the same group already over 10%: MAP_GROUP alone, not twice
+  const big = hs(12).map((h) => Object.assign(h, { pct: 1 }));
+  assert.deepEqual(mapSignals({ mode: "young", groups: mapGroups(big, src, "young"), hub: null, holders: big }).map((s) => s.code), ["MAP_GROUP"]);
+  // a different, smaller-share swarm next to a big group: both
+  const two = [{ addr: "a", pct: 8, type: "person", funder: "G" }, { addr: "b", pct: 8, type: "person", funder: "G" }].concat(hs(11));
+  const src2 = { F: src.F, G: { rate: 3, type: "person" } };
+  assert.deepEqual(mapSignals({ mode: "young", groups: mapGroups(two, src2, "young"), hub: null, holders: two }).map((s) => [s.code, s.data.n]), [["MAP_GROUP", 2], ["MAP_SWARM", 11]]);
+  // exchanges never form groups, so they never swarm
+  assert.deepEqual(mapGroups(hs(15), { F: { rate: 900, type: "exchange" } }, "young"), []);
 });
 
 test("a young token: everyone is traced, a distributor's holders form a group, the hub and the group warn", async () => {

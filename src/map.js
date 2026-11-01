@@ -16,6 +16,9 @@ import { rugcheckReport } from "./rugcheck.js";
 export const BOT_PER_HOUR = 200 / 48;
 export const YOUNG_DAYS = 14;
 export const MAP_GROUP_YOUNG = 10, MAP_GROUP_MATURE = 15, MAP_HUB = 20, MAP_WHALE = 10;
+// Many holders funded by one wallet warn whatever they hold together: with only the top 20 read the share
+// is cut short (1/11, Leverhedge: 19 of the top 20 with 0.4% each from one source, 8.1% in view)
+export const MAP_SWARM = 10;
 export const MAP_MAX_FREE = 20, MAP_MAX_OWN = 75;
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -144,7 +147,12 @@ export function mapGroups(holders, sources, mode) {
 export function mapSignals(m) {
   const out = [], young = m.mode === "young", big = m.groups[0];
   const gLimit = young ? MAP_GROUP_YOUNG : MAP_GROUP_MATURE;
-  if (big && big.pct > gLimit) out.push({ code: "MAP_GROUP", s: young ? "bad" : "warn", data: { n: big.members.length, pct: big.pct, funder: big.funder } });
+  const grouped = big && big.pct > gLimit;
+  if (grouped) out.push({ code: "MAP_GROUP", s: young ? "bad" : "warn", data: { n: big.members.length, pct: big.pct, funder: big.funder } });
+  // the group with most wallets, unless it is the one MAP_GROUP already named
+  const many = m.groups.slice().sort(function (a, b) { return b.members.length - a.members.length || b.pct - a.pct; })[0];
+  if (many && many.members.length >= MAP_SWARM && !(grouped && many === big))
+    out.push({ code: "MAP_SWARM", s: young ? "bad" : "warn", data: { n: many.members.length, of: (m.holders || []).length, pct: many.pct, funder: many.funder } });
   if (young && m.hub && m.hub.out >= MAP_HUB) out.push({ code: "MAP_HUB", s: "bad", data: { n: m.hub.out, addr: m.hub.addr } });
   if (!young) {
     const w = m.holders.filter(function (h) { return h.type === "person" && h.pct > MAP_WHALE; }).sort(function (a, b) { return b.pct - a.pct; })[0];
