@@ -1,7 +1,7 @@
 // An in-memory Solana + DexScreener + RugCheck + Helius + CoinGecko, answering through a fake fetch.
 // Describe the world declaratively and every engine function can run end to end against it.
 import { createHash } from "node:crypto";
-import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO, WALLET_BASE_URL } from "../src/constants.js";
+import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, DEX_SEARCH, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO, WALLET_BASE_URL } from "../src/constants.js";
 import { onCurve } from "../src/curve.js";
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -35,7 +35,8 @@ export function pda(label) {
 
 /**
  * world = {
- *   mints:   { [mint]: { mintAuthority, freezeAuthority, supply, decimals, extensions: [names], program } },
+ *   mints:   { [mint]: { mintAuthority, freezeAuthority, supply, decimals, extensions: [names or {extension, state}], program } },
+ *   search:  [pairs]                                          DexScreener search results (same name and ticker)
  *   largest: { [mint]: [{ address, amount, owner }] }       token accounts (owner = who owns the token account)
  *   owners:  { [address]: programId }                       who owns each account (SYSTEM_PROGRAM = wallet)
  *   wallets: { [wallet]: { sol, tokens: { [mint]: uiAmount } } }
@@ -63,7 +64,7 @@ export function fakeChain(world) {
         const a = p[0], m = w.mints[a];
         if (m) return { value: { owner: m.program || TOKEN_PROGRAM, data: { parsed: { type: "mint", info: {
           mintAuthority: m.mintAuthority || null, freezeAuthority: m.freezeAuthority || null,
-          supply: String(m.supply), decimals: m.decimals, extensions: (m.extensions || []).map((e) => ({ extension: e })) } } } } };
+          supply: String(m.supply), decimals: m.decimals, extensions: (m.extensions || []).map((e) => (typeof e === "string" ? { extension: e } : e)) } } } } };
         if (w.owners[a] || w.wallets[a]) return { value: { owner: w.owners[a] || SYSTEM_PROGRAM, data: ["", "base64"] } };
         return { value: null };
       }
@@ -107,6 +108,7 @@ export function fakeChain(world) {
   }
 
   function http(url) {
+    if (url.indexOf(DEX_SEARCH) === 0) return { pairs: w.search || [] };
     if (url.indexOf(DEX) === 0) {
       if (w.fail.dex === "network") throw new TypeError("fetch failed");
       if (w.fail.dex) return { __status: 500 };

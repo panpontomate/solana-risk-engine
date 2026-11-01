@@ -1,4 +1,4 @@
-import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, ISSUERS, OFFICIAL_TOKENS } from "./constants.js";
+import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, ISSUERS, OFFICIAL_TOKENS, FAMOUS } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
@@ -115,7 +115,8 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
       if (info.ext.indexOf("transferHook") >= 0 && hookActive(info)) it.push(sig("CTL_TRANSFER_HOOK", "warn"));
       if (info.ext.indexOf("defaultAccountState") >= 0 && bornFrozen(info)) it.push(sig("CTL_DEFAULT_FROZEN", "warn"));
     }
-    if (info.ext.indexOf("transferFeeConfig") >= 0) it.push(sig("CTL_TRANSFER_FEE", "warn"));
+    // PYUSD and USDG carry the fee extension at 0%: under a known issuer that is how the product is built
+    if (info.ext.indexOf("transferFeeConfig") >= 0 && !(issuer && info.feeBps === 0)) it.push(sig("CTL_TRANSFER_FEE", "warn"));
     if (info.ext.indexOf("nonTransferable") >= 0) it.push(sig("CTL_NON_TRANSFERABLE", "warn"));
   }
   // Launch farms put out a token every few minutes and drop each one as soon as buyers arrive: in a
@@ -139,7 +140,10 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
     if (conc.w1 > 30 || conc.w10 > 70) st = "bad"; else if (conc.w1 > 15 || conc.w10 > 50) st = "warn";
     if (soft && st === "bad") st = "warn";
     const data = { w1: conc.w1, w10: conc.w10, prog: conc.prog, wallets: conc.nW };   // prog >= 20 is worth mentioning
-    const code = !conc.nW ? "CON_ALL_POOLS" : (st === "ok" ? "CON_OK" : "CON_HIGH");
+    let code = !conc.nW ? "CON_ALL_POOLS" : (st === "ok" ? "CON_OK" : "CON_HIGH");
+    // under a verified issuer the big holders are its treasury, custodians, exchanges and lending
+    // protocols, not someone about to dump: shown, not counted (PYUSD 56% in one wallet, 1/11)
+    if (issuer && code === "CON_HIGH") { code = "CON_ISSUER"; st = "ok"; }
     concentration = mkLight("concentration", [sig(code, st, data)]);
   } else {
     concentration = mkLight("concentration", [sig("CON_UNSPLIT", (conc.top1 > 30 || conc.top10 > 70) ? "warn" : "ok", { top1: conc.top1, top10: conc.top10 })]);
@@ -148,7 +152,9 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   // 3) market and exit
   const liq = (pair.liquidity && pair.liquidity.usd) || 0, vol = (pair.volume && pair.volume.h24) || 0;
   it = [];
-  if (pair.liqRaw) it.push(sig("MKT_LIQ_INFLATED", "bad", { reported: pair.liqRaw, real: liq }));
+  // a verified issuer's token with little real liquidity on Solana trades elsewhere: not a trap
+  if (pair.liqRaw && issuer) it.push(sig(liq < 10000 ? "MKT_LIQ_VERY_LOW" : "MKT_LIQ_LOW", "warn", { liq: liq, offSolana: true }));
+  else if (pair.liqRaw) it.push(sig("MKT_LIQ_INFLATED", "bad", { reported: pair.liqRaw, real: liq }));
   else if (liq < 10000) it.push(sig("MKT_LIQ_VERY_LOW", "bad", { liq: liq }));
   else if (liq < 50000) it.push(sig("MKT_LIQ_LOW", "warn", { liq: liq }));
   if (vol < 1000) it.push(sig("MKT_VOLUME_LOW", "warn", { vol: vol }));
@@ -274,7 +280,10 @@ export async function assess(client, mint, pair, opts) {
     const front = [];
     if (imp) front.push(sig("IMPOSTOR", "bad", { symbol: imp.sym, real: imp.real }));
     if (brand) front.push(sig(brand.exact ? "BRAND_COPY" : "BRAND_NAME", brand.exact ? "bad" : "warn", { brand: brand.brand }));
-    if (copies && !imp && !official) {
+    // the real USDC/USDT is rarely the base token of a DexScreener pair, so the search found an older
+    // "USDC" and called the real one the copy (USDC and USDT showed HIGH, 1/11)
+    const canon = Object.keys(FAMOUS).some(function (k) { return FAMOUS[k] === mint; }) || !!issuerOf(info, mint);
+    if (copies && !imp && !official && !canon) {
       const strong = copies.origLiq >= 50000 && copies.origLiq >= 10 * Math.max(copies.liq, 1);
       front.push(sig("COPYCAT", strong ? "bad" : "warn", copies));
     }
@@ -285,7 +294,7 @@ export async function assess(client, mint, pair, opts) {
     const lf = levelFrom(lights); lvl = lf.lvl; sev = lf.sev; reasons = reasonsFrom(lights);
     // a copy of a famous token or a real company, or liquidity faked 100 times over, is high risk even
     // when everything else looks normal: it is built to look like something it is not
-    if (imp || (brand && brand.exact) || fakeLiquidity(pair)) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
+    if (imp || (brand && brand.exact) || (fakeLiquidity(pair) && !issuerOf(info, mint))) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
   } else {
     const s = score(info);
     pts = s.pts; reasons = s.why; lvl = pts >= 25 ? "SPAM" : "NO_MARKET";

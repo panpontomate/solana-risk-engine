@@ -162,6 +162,27 @@ export const ISSUERS = [
     "JDq14BWvqCRFNu1krb12bcRpbGtJZ1FLEakMw6FdxJNs",   // freeze and pause (program)
     "5aMNNLQJwAEeoemTEMkv5NVjqKwvvefRYCQ5Z67HFvEq",   // permanent delegate, transfer hook, confidential transfers
     "S7vYFFWH6BjJyEsdrPQpqpYTqLTrPRK6KW3VwsJuRaS"     // share-split multiplier (scaled UI amount)
+  ] },
+  // Each mint below is listed by its issuer (URL); the keys are the ones those mints carry on-chain (1/11/2026).
+  // An issuer is only added with an official page for its mints: FDUSD was left out for lack of one.
+  { name: "Paxos", keys: [
+    // PYUSD 2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo  https://docs.paxos.com/guides/stablecoin/pyusd/mainnet
+    // USDG  2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH  https://docs.paxos.com/guides/stablecoin/usdg/mainnet
+    "AxJkHRY3puoofyj7Pn512M1SGBgWroXMkEdNPQypkzbu",   // PYUSD mint
+    "2e99QgqSDtiJSi5omGRVeZJuqNFRZdpy2YgG3mBd1AB4",   // USDG mint
+    "2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk"    // freeze, permanent delegate, hook, fee (both)
+  ] },
+  { name: "Circle", keys: [
+    // USDC EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v, EURC HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr
+    // https://developers.circle.com/stablecoins/usdc-contract-addresses , .../eurc-contract-addresses
+    "BJE5MMbqXjVwjAF7oxwPYXnTXDyspzZyt4vwenNw5ruG",   // USDC mint
+    "7dGbd2QZcCKcTndnHcTL8q7SMVXAkp688NTQYwrRCrar",   // USDC freeze
+    "Hy9168u7b2Toujh8SJKtKK8DWbyaBbXPzxm337R4o4XY",   // EURC mint
+    "6FF2CPcL6fat16QVJH6W27DeBcX7TSqbwY3a5wtyVJLC"    // EURC freeze
+  ] },
+  { name: "Tether", keys: [
+    // USDT Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB (FAMOUS.USDT)
+    "Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi"     // USDT mint and freeze
   ] }
 ];
 

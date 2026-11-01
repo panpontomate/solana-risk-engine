@@ -146,8 +146,46 @@ test("a known issuer's tokenized share is not a creator who can rug", () => {
   const lights = buildLights(i, xsConc, p, 0, tokenType(i, p, NOW), null, NOW);
   assert.deepEqual(lights[0].items, [{ code: "CTL_KNOWN_ISSUER", s: "ok", data: { issuer: "xStocks (Backed)" } }]);
   assert.deepEqual(lights[3].items, [{ code: "DEP_KNOWN_ISSUER", s: "warn", data: { issuer: "xStocks (Backed)" } }]);
-  assert.equal(levelFrom(lights).lvl, "MEDIUM");     // was HIGH: issuer's mint authority counted as a rug risk
+  // custodians' and exchanges' share is shown, not counted (0.4.9; before it kept xStocks at MEDIUM)
+  assert.deepEqual([lights[1].s, lights[1].items[0].code], ["ok", "CON_ISSUER"]);
+  assert.equal(levelFrom(lights).lvl, "LOW");        // was HIGH (0.4.3), then MEDIUM (0.4.4-0.4.8)
   assert.equal(levelFrom(buildLights(i, goodConc, p, 0, "TOKENIZED", null, NOW)).lvl, "LOW");
+});
+
+// PYUSD as it is on-chain (1/11/2026): Paxos holds every control key; the fee extension is set at 0%
+const PX = { mint: "AxJkHRY3puoofyj7Pn512M1SGBgWroXMkEdNPQypkzbu", ctl: "2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk" };
+const pyusd = (o) => info(Object.assign({ mintAuth: PX.mint, freezeAuth: PX.ctl, authKind: { [PX.mint]: "wallet", [PX.ctl]: "wallet" },
+  ext: ["mintCloseAuthority", "permanentDelegate", "transferFeeConfig", "confidentialTransferMint", "transferHook", "metadataPointer", "tokenMetadata"],
+  hook: { program: null, auth: PX.ctl }, extKeys: [PX.ctl], feeBps: 0 }, o));
+const pxConc = { ok: true, w1: 56, w10: 70, prog: 23, nW: 10 };
+
+test("verified issuers past xStocks: PYUSD is Paxos, a 0% fee is no warning, its treasury is not a whale", () => {
+  const i = pyusd(), p = pair({ baseToken: { symbol: "PYUSD", name: "PayPal USD" } });
+  assert.equal(issuerOf(i), "Paxos");
+  assert.equal(issuerOf(info({ mintAuth: "BJE5MMbqXjVwjAF7oxwPYXnTXDyspzZyt4vwenNw5ruG", freezeAuth: "7dGbd2QZcCKcTndnHcTL8q7SMVXAkp688NTQYwrRCrar", extKeys: [] })), "Circle");
+  assert.equal(issuerOf(info({ mintAuth: "Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi", freezeAuth: "Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi", extKeys: [] })), "Tether");
+  const l = buildLights(i, pxConc, p, 0, "STABLE", null, NOW);
+  assert.deepEqual(l[0].items.map((x) => x.code), ["CTL_KNOWN_ISSUER"]);
+  assert.deepEqual([l[1].s, l[1].items[0].code], ["ok", "CON_ISSUER"]);
+  assert.deepEqual(l[3].items.map((x) => x.code), ["DEP_KNOWN_ISSUER", "DEP_STABLE_ISSUER"]);
+  assert.equal(levelFrom(l).lvl, "LOW");             // was MEDIUM with 7 warnings
+  // a fee that is really charged still warns, issuer or not
+  assert.ok(buildLights(pyusd({ feeBps: 50 }), pxConc, p, 0, "STABLE", null, NOW)[0].items.some((x) => x.code === "CTL_TRANSFER_FEE"));
+  // fee not read (older callers): assume it is charged
+  assert.ok(buildLights(pyusd({ feeBps: undefined }), pxConc, p, 0, "STABLE", null, NOW)[0].items.some((x) => x.code === "CTL_TRANSFER_FEE"));
+  // the same holders without a verified issuer are still concentration
+  const anon = buildLights(info({ mintAuth: null, freezeAuth: null }), pxConc, p, 0, "OPEN", null, NOW);
+  assert.deepEqual([anon[1].s, anon[1].items[0].code], ["bad", "CON_HIGH"]);
+  // someone else's key among Paxos's is not Paxos
+  assert.equal(issuerOf(pyusd({ extKeys: [PX.ctl, "Scammer1"] })), null);
+});
+
+test("a verified issuer's thin market on Solana is little liquidity, not inflated liquidity built to fool", () => {
+  const p = pair({ liquidity: { usd: 64 }, liqRaw: 13811 });
+  const ok = buildLights(pyusd(), pxConc, p, 0, "STABLE", null, NOW)[2].items[0];
+  assert.deepEqual([ok.code, ok.s, ok.data.offSolana], ["MKT_LIQ_VERY_LOW", "warn", true]);
+  const anon = buildLights(info({ mintAuth: null, freezeAuth: null }), goodConc, p, 0, "OPEN", null, NOW)[2].items[0];
+  assert.deepEqual([anon.code, anon.s], ["MKT_LIQ_INFLATED", "bad"]);
 });
 
 test("borrowing an issuer's key is not enough to pass as the issuer", () => {

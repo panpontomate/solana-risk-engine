@@ -49,6 +49,7 @@ export default {
     CON_UNAVAILABLE: () => "Could not check holder concentration (the service did not answer; try again in a while)",
     CON_ALL_POOLS: (d) => "Almost all the supply is in pools or programs" + prog(d),
     CON_OK: (d) => "No worrying concentration (largest individual wallet: " + pct(d.w1) + ")" + prog(d),
+    CON_ISSUER: (d) => "The largest wallet holds " + pct(d.w1) + " and the top 10 hold " + pct(d.w10) + ": with a verified issuer these are usually its treasury, custodians, exchanges or protocols, so it does not count as a risk" + prog(d),
     CON_HIGH: (d) => "The largest individual wallet holds " + pct(d.w1) + " and the top 10 hold " + pct(d.w10) + " of the supply" + prog(d),
     CON_UNSPLIT: (d) => "Could not separate pools from people. The largest account holds " + pct(d.top1) + " of the supply",
 

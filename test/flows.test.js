@@ -133,6 +133,34 @@ test("assess: an impostor of a famous token is always high risk", async () => {
   assert.ok(r.sev >= 5);
 });
 
+test("assess: the real USDC is never the copy of an older 'USDC'; a newer look-alike still is", async () => {
+  // 1/11 live: the real USDC is rarely a pair's base token, so the search found an older "USDC" with more
+  // liquidity and called the real one a copy (USDC and USDT showed HIGH)
+  const older = { chainId: "solana", baseToken: { address: addr("old-usdc"), symbol: "USDC", name: "USD Coin" }, pairCreatedAt: Date.now() - 233 * DAY, liquidity: { usd: 2e6 } };
+  const w = riskWorld({}, { baseToken: { symbol: "USDC", name: "USD Coin" }, liquidity: { usd: 60000 }, pairCreatedAt: Date.now() - 30 * DAY }, { search: [older] });
+  w.mints[USDC] = w.mints[w.M]; w.largest[USDC] = w.largest[w.M];
+  w.pairs[0].baseToken.address = USDC;
+  const real = await scanner(w).analyzeToken(USDC);
+  assert.ok(!real.reasons.some((x) => x.code === "COPYCAT"), JSON.stringify(real.reasons));
+  assert.notEqual(real.lvl, "HIGH");
+  // an ordinary token with the same shape is still flagged
+  const w2 = riskWorld({}, { baseToken: { symbol: "SPOT", name: "Spotify Wrapped" }, liquidity: { usd: 60000 }, pairCreatedAt: Date.now() - 30 * DAY },
+    { search: [Object.assign({}, older, { baseToken: { address: addr("old-spot"), symbol: "SPOT", name: "Spotify Wrapped" } })] });
+  w2.pairs[0].baseToken.address = w2.M;
+  const copy = await scanner(w2).analyzeToken(w2.M);
+  assert.ok(copy.reasons.some((x) => x.code === "COPYCAT"));
+});
+
+test("getMint reads the transfer fee actually set", async () => {
+  const w = riskWorld({ program: TOKEN_2022, extensions: [{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 0 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }] });
+  const { getMint } = await import("../src/index.js");
+  assert.equal((await getMint(client(w), w.M)).feeBps, 0);
+  w.mints[w.M].extensions = [{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 100 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }];
+  assert.equal((await getMint(client(w), w.M)).feeBps, 100);   // a raise already scheduled counts
+  w.mints[w.M].extensions = ["transferFeeConfig"];
+  assert.equal((await getMint(client(w), w.M)).feeBps, null);
+});
+
 test("assess: tokens without a market are spam or just 'no market'", async () => {
   const W = addr("auth");
   const spam = riskWorld({ mintAuthority: W }, null, { owners: { [W]: SYSTEM_PROGRAM } });

@@ -45,9 +45,16 @@ export async function getMint(client, mint) {
     // "default account state" only matters when new accounts are born frozen
     hook: { program: hook.programId || null, auth: hook.authority || null },
     defaultState: state("defaultAccountState").accountState || null,
+    // transfer fee in basis points (the higher of the current and the scheduled one); null when not set
+    feeBps: feeBps(state("transferFeeConfig")),
     // every key that controls something in the extensions (delegate, hook, pause, metadata...)
     extKeys: extKeys(exts)
   };
+}
+
+function feeBps(s) {
+  const a = s.newerTransferFee && s.newerTransferFee.transferFeeBasisPoints, b = s.olderTransferFee && s.olderTransferFee.transferFeeBasisPoints;
+  return (typeof a === "number" || typeof b === "number") ? Math.max(Number(a) || 0, Number(b) || 0) : null;
 }
 
 function extKeys(exts) {
