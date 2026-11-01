@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createClient, connectionMap, perHour, walletType, mapType, mapGroups, topHub, mapSignals, allHolders,
-  EXCHANGE_PER_HOUR, MAP_HUB, SYSTEM_PROGRAM, TOKEN_PROGRAM, createScanner, describe } from "../src/index.js";
+  EXCHANGE_PER_HOUR, RATE_MIN_SIGS, MAP_HUB, SYSTEM_PROGRAM, TOKEN_PROGRAM, createScanner, describe } from "../src/index.js";
 import { fakeChain, addr, pairOf, sigsOver } from "./fakechain.js";
 
 const OWN = "https://rpc.example.test/";
@@ -37,7 +37,7 @@ function world(o) {
       [EXCH]: sigsOver("m-exch", 1000, 3600, 1_799_000_000),       // 1000 an hour
       [M]: [{ signature: "m-create", blockTime: 1_790_000_000 }]
     }, o.sigs || {}),
-    txs: { "m-p1-first": DIST, "m-p2-first": DIST, "m-p3-first": EXCH, "m-big-first": BIG, "m-create": LAUNCHER, "m-bot-299": DIST },
+    txs: Object.assign({ "m-p1-first": DIST, "m-p2-first": DIST, "m-p3-first": EXCH, "m-big-first": BIG, "m-create": LAUNCHER, "m-bot-299": DIST }, o.txs || {}),
     pairs: [pairOf(M)],
     rugcheck: { [M]: {
       report: { creator: CREATOR, detectedAt: new Date(o.createdAt || NOW - 3 * 86400000).toISOString(), token: { supply: 1000 } },
@@ -54,6 +54,31 @@ test("perHour and walletType: exchanges only above 350 an hour", () => {
   assert.equal(walletType("wallet", 54), "bot");          // busy, but a person-run distributor is not an exchange
   assert.equal(walletType("active", 1), "bot");
   assert.equal(walletType("wallet", 1), "person");
+});
+
+test("perHour: a handful of transactions is no rate (fresh wallets are not exchanges)", () => {
+  const T = 1_799_000_000;
+  assert.equal(perHour([{ signature: "b", blockTime: T + 40 }, { signature: "a", blockTime: T }]), 0);   // funded + bought in 40 s
+  assert.equal(perHour([{ signature: "b", blockTime: T }, { signature: "a", blockTime: T }]), 0);        // same second (bundle)
+  assert.equal(perHour(sigsOver("x", RATE_MIN_SIGS - 1, 60)), 0);
+  assert.ok(perHour(sigsOver("x", RATE_MIN_SIGS, 60)) > EXCHANGE_PER_HOUR);                                // enough to judge
+});
+
+test("a pump.fun-style bundle: fresh snipers funded by a one-use bundler still form a group", async () => {
+  const T = 1_799_000_000, BUNDLER = addr("m-bundler");
+  // P1 and P2: funded and bought in the same second; BUNDLER: 12 transactions in 5 minutes, nothing else
+  const two = (p) => [{ signature: p + "-buy", blockTime: T }, { signature: p + "-first", blockTime: T }];
+  const c = createClient({ rpcUrl: OWN, fetch: fakeChain(world({
+    sigs: { [P1]: two("m-p1"), [P2]: two("m-p2"), [BUNDLER]: sigsOver("m-bundler", 12, 300, T) },
+    txs: { "m-p1-first": BUNDLER, "m-p2-first": BUNDLER }
+  })), retryDelayMs: 0 });
+  const m = await connectionMap(c, M, { now: NOW, max: 20 });
+  const by = Object.fromEntries(m.holders.map((h) => [h.addr, h]));
+  assert.equal(by[P1].type, "person");                     // before: 7200 an hour -> "exchange", never traced
+  assert.equal(by[P1].funder, BUNDLER);
+  assert.equal(m.sources[BUNDLER].type, "person");         // before: 144 an hour -> "exchange", group dropped
+  assert.deepEqual(m.groups[0].members.sort(), [P1, P2].sort());
+  assert.ok(m.signals.some((s) => s.code === "MAP_GROUP" && s.s === "bad"));
 });
 
 test("a young token: everyone is traced, a distributor's holders form a group, the hub and the group warn", async () => {

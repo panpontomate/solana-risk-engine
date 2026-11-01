@@ -54,7 +54,7 @@ export { score, issuerOf, trustedIssuer, tokenType, buildLights, levelFrom, data
 export { recentLaunches, chainLaunches } from "./launch.js";
 export { analyzeToken, analyzeWallet, analyzeAddress, sortResults } from "./wallet.js";
 export { holderBase, markBusy, onlyReceives, PASSIVE_SAMPLE, findFunder, findFunders, clusterByFunder, holderRows, creatorInfo, analyzeHolders,
-  perHour, sourceRates, groupList, EXCHANGE_PER_HOUR, YOUNG_DAYS, HOLD_GROUP_YOUNG, HOLD_GROUP_MATURE } from "./holders.js";
+  perHour, sourceRates, groupList, EXCHANGE_PER_HOUR, RATE_MIN_SIGS, YOUNG_DAYS, HOLD_GROUP_YOUNG, HOLD_GROUP_MATURE } from "./holders.js";
 export { connectionMap, allHolders, transferNetworks, topHub, mapGroups, mapSignals, walletType,
   BOT_PER_HOUR, mapType, MAP_GROUP_YOUNG, MAP_GROUP_MATURE, MAP_HUB, MAP_WHALE, MAP_MAX_FREE, MAP_MAX_OWN } from "./map.js";
 export { fetchSwaps, solHistory, priceSeries, parseTrades, pnlFromTrades, pnlStatus, estimatePnl } from "./pnl.js";

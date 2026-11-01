@@ -134,9 +134,14 @@ export const YOUNG_DAYS = 14;
 // A group (holders sharing the source of their first SOL) over this % of the supply warns
 export const HOLD_GROUP_YOUNG = 10, HOLD_GROUP_MATURE = 15;
 
-// Transactions per hour over a page of signatures (newest first)
+// Below this many signatures there is no rate to speak of: a fresh wallet funded and buying within the same
+// minute (or a one-use bundler that funded ten wallets in five) would look like thousands an hour, i.e. an
+// exchange, and drop out of the groups it belongs to. Exchanges and bots have far more than this.
+export const RATE_MIN_SIGS = 50;
+
+// Transactions per hour over a page of signatures (newest first); 0 under RATE_MIN_SIGS
 export function perHour(sigs) {
-  if (!sigs || sigs.length < 2) return 0;
+  if (!sigs || sigs.length < RATE_MIN_SIGS) return 0;
   const span = ((sigs[0].blockTime || 0) - (sigs[sigs.length - 1].blockTime || 0)) / 3600;
   return span > 0 ? sigs.length / span : sigs.length * 3600;
 }
