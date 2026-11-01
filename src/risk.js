@@ -1,4 +1,4 @@
-import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, ISSUERS, OFFICIAL_TOKENS, FAMOUS } from "./constants.js";
+import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, CL_POOL_LABELS, ISSUERS, OFFICIAL_TOKENS, FAMOUS } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
@@ -183,7 +183,10 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   // On Pump.fun's bonding curve there is no LP at all: the curve program holds the liquidity and nobody
   // can pull it (RugCheck reports 0% locked, which flagged 49 of 75 curve tokens in a 100-token sample)
   const onCurve = PUMP_CURVE_DEXES.indexOf(pair.dexId) >= 0;
-  if (rc && !soft && young && !onCurve && liq > 0 && typeof rc.lpLockedPct === "number" && isFinite(rc.lpLockedPct)) {
+  // Same in concentrated-liquidity pools: no LP token, RugCheck reports ~0% locked (STONK on Meteora DLMM,
+  // $2.4M liquidity in 27 pairs, showed a red flag, 1/11)
+  const clPool = (pair.labels || []).some(function (l) { return CL_POOL_LABELS.indexOf(l) >= 0; });
+  if (rc && !soft && young && !onCurve && !clPool && liq > 0 && typeof rc.lpLockedPct === "number" && isFinite(rc.lpLockedPct)) {
     if (rc.lpLockedPct < 20) it.push(sig("MKT_LP_UNLOCKED", "bad", { pct: rc.lpLockedPct }));
     else if (rc.lpLockedPct < 60) it.push(sig("MKT_LP_PARTLY_LOCKED", "warn", { pct: rc.lpLockedPct }));
   }

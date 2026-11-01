@@ -19,6 +19,9 @@ export const SYSTEM_PROGRAM = "11111111111111111111111111111111";
 export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
 // dexId of a token still on Pump.fun's bonding curve: DexScreener says "pumpfun", GeckoTerminal "pump-fun"
 export const PUMP_CURVE_DEXES = ["pumpfun", "pump-fun"];
+// DexScreener labels of concentrated-liquidity pools (Meteora DLMM, Raydium CLMM, Orca Whirlpool): liquidity
+// lives in positions, there is no LP token to lock or burn, so RugCheck's "locked %" means nothing there
+export const CL_POOL_LABELS = ["DLMM", "CLMM", "wp"];
 
 export const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";

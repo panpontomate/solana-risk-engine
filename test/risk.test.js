@@ -113,6 +113,19 @@ test("no unlocked-LP signal while a token is on Pump.fun's bonding curve", () =>
   assert.ok(g.items.some((x) => x.code === "MKT_LP_UNLOCKED"));
 });
 
+test("no unlocked-LP signal in concentrated-liquidity pools (DLMM, CLMM, Whirlpool): there is no LP token", () => {
+  const i = info(), rc = { lpLockedPct: 0.0006 };   // STONK on Meteora DLMM, 1/11
+  for (const labels of [["DLMM"], ["CLMM"], ["wp"]]) {
+    const m = buildLights(i, goodConc, pair({ dexId: "meteora", labels, pairCreatedAt: NOW - 81 * DAY }), 0, "OPEN", rc, NOW)[2];
+    assert.ok(!m.items.some((x) => x.code === "MKT_LP_UNLOCKED"), labels[0]);
+  }
+  // a classic pool with an LP token still warns
+  for (const labels of [undefined, [], ["DYN"]]) {
+    const m = buildLights(i, goodConc, pair({ dexId: "raydium", labels, pairCreatedAt: NOW - 81 * DAY }), 0, "OPEN", rc, NOW)[2];
+    assert.ok(m.items.some((x) => x.code === "MKT_LP_UNLOCKED"), String(labels));
+  }
+});
+
 test("serial creators: 2+ other launches in 24 h warn, 5+ are bad", () => {
   const i = info(), p = pair();
   const ctl = (day) => buildLights(i, goodConc, p, 0, "OPEN", null, NOW, day === null ? null : { creator: "C", day, total: day })[0];
