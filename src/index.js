@@ -49,7 +49,7 @@ export { getTokens, getMint, getConc, getAuthKinds, isMint, accountKinds, kindOf
 export { getMarkets, realLiq, impostorOf, INFLATED_RATIO, geckoLiquidity, geckoPair, brandOf, copiesOf, fakeLiquidity, FAKE_LIQ_RATIO } from "./markets.js";
 export { rugcheckSummary, rugcheckReport, rugcheckGraph, netBalances, creatorLaunches, CREATOR_DEAD_MCAP } from "./rugcheck.js";
 export { score, issuerOf, trustedIssuer, tokenType, buildLights, levelFrom, dataOnly, reasonsFrom, assess, SERIAL_WARN, SERIAL_BAD, HISTORY_MIN, HISTORY_WARN, HISTORY_BAD_MIN, HISTORY_BAD } from "./risk.js";
-export { recentLaunches } from "./launch.js";
+export { recentLaunches, chainLaunches } from "./launch.js";
 export { analyzeToken, analyzeWallet, analyzeAddress, sortResults } from "./wallet.js";
 export { holderBase, markBusy, onlyReceives, PASSIVE_SAMPLE, findFunder, findFunders, clusterByFunder, holderRows, creatorInfo, analyzeHolders,
   perHour, sourceRates, groupList, EXCHANGE_PER_HOUR, YOUNG_DAYS, HOLD_GROUP_YOUNG, HOLD_GROUP_MATURE } from "./holders.js";

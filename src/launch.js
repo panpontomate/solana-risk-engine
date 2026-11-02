@@ -42,3 +42,27 @@ export async function recentLaunches(client, wallet, opts) {
   });
   return { n: mints.length, mints: mints, scanned: day.length, more: sigs.length >= limit && day.length === sigs.length };
 }
+
+/**
+ * The creator's recent launches read on chain, for when RugCheck does not know the token yet (it answers
+ * 400 "unable to generate report" for most tokens a few minutes old, 2026-11-02) or does not answer.
+ * The launcher is the first signer of the token's creation transaction: the wallet that paid, as in
+ * recentLaunches (farms name a fresh creator each time but pay from one wallet). Only new tokens: past
+ * 1000 transactions the creation is too far back to find cheaply.
+ * Same shape as creatorLaunches, without the history of older launches (that needs market caps):
+ * @returns {creator, day, total, old: 0, dead: 0, best: null, chain: true, more} or null
+ */
+export async function chainLaunches(client, mint, opts) {
+  opts = opts || {};
+  const sigs = (await client.rpc("getSignaturesForAddress", [mint, { limit: 1000 }])) || [];
+  if (!sigs.length || sigs.length >= 1000) return null;
+  const p = { encoding: "jsonParsed", maxSupportedTransactionVersion: 1, commitment: "confirmed" };
+  const tx = await client.rpc("getTransaction", [sigs[sigs.length - 1].signature, p]);
+  const keys = tx && tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys;
+  const first = keys && keys.filter(function (k) { return k.signer; })[0];
+  const wallet = first && (first.pubkey || first);
+  if (!wallet || wallet === mint) return null;
+  const r = await recentLaunches(client, wallet, { now: opts.now, limit: opts.limit });
+  const day = r.mints.filter(function (m) { return m !== mint; }).length;
+  return { creator: wallet, day: day, total: day, old: 0, dead: 0, best: null, chain: true, more: r.more };
+}

@@ -4,6 +4,7 @@ import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
 import { impostorOf, brandOf, copiesOf, fakeLiquidity } from "./markets.js";
 import { rugcheckSummary, creatorLaunches } from "./rugcheck.js";
+import { chainLaunches } from "./launch.js";
 
 // Every finding is a "signal": {code, s, data}. `s` is ok | na | warn | bad, `data` holds the numbers
 // behind it. Turning signals into sentences is i18n's job (describe / explainLight), never the engine's.
@@ -264,7 +265,10 @@ export async function assess(client, mint, pair, opts) {
   const rcPromise = pair ? rugcheckSummary(client, mint) : Promise.resolve(null);   // in parallel with the RPC calls below
   // Serial launching only matters while a token is new; RugCheck's full report is small (~10 KB) then
   const fresh = pair && !opts.skipCreator && (!pair.pairCreatedAt || Date.now() - pair.pairCreatedAt < 7 * DAY);
-  const launchPromise = fresh ? creatorLaunches(client, mint) : Promise.resolve(null);
+  // when RugCheck does not know the creator (new tokens often get a 400) the launches are counted on chain
+  const launchPromise = fresh ? creatorLaunches(client, mint).then(function (r) {
+    return r || chainLaunches(client, mint).catch(function (e) { if (isCancel(e)) throw e; return null; });
+  }) : Promise.resolve(null);
   // Copies of the same name and ticker: one search per token, so only when asked (a single token, not a wallet)
   const copiesPromise = pair && opts.copies && !OFFICIAL_TOKENS[mint] ? copiesOf(client, mint, pair).catch(function (e) { if (isCancel(e)) throw e; return null; }) : Promise.resolve(null);
   let info = null, conc = null;

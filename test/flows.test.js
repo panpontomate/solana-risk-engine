@@ -239,6 +239,25 @@ test("recentLaunches counts Pump.fun creations paid by a wallet in the last 24 h
   assert.equal(r.more, false);
 });
 
+test("assess: without a RugCheck report the serial launcher is counted on chain (chainLaunches)", async () => {
+  const w = riskWorld({}, { pairCreatedAt: Date.now() - 600000 });
+  const W = addr("farm"), now = Date.now();
+  const launch = (m) => ({ transaction: { message: { accountKeys: [{ pubkey: W, signer: true }, { pubkey: m, signer: true }, { pubkey: PUMP_PROGRAM }] } },
+    meta: { logMessages: ["Program log: Instruction: Create"], preTokenBalances: [], postTokenBalances: [{ mint: m }] } });
+  // the token's own creation (its only signature), and 6 launches by the same wallet today
+  w.sigs = { [w.M]: [{ signature: "c0", blockTime: now / 1000 - 600 }],
+    [W]: ["c0", "l1", "l2", "l3", "l4", "l5"].map((s, i) => ({ signature: s, blockTime: now / 1000 - 600 - i * 60 })) };
+  w.txs = { c0: launch(w.M), l1: launch("A"), l2: launch("B"), l3: launch("C"), l4: launch("D"), l5: launch("E") };
+  const r = await scanner(w).analyzeToken(w.M);                    // no RugCheck report in this world
+  const s = r.lights[0].items.find((x) => x.code === "CTL_SERIAL_CREATOR");
+  assert.deepEqual(s, { code: "CTL_SERIAL_CREATOR", s: "bad", data: { n: 5, creator: W } });
+  assert.equal(r.creator.chain, true);
+  // a token past 1000 transactions: its creation is too far back, nothing is guessed
+  w.sigs[w.M] = Array.from({ length: 1000 }, (_, i) => ({ signature: "x" + i, blockTime: now / 1000 - i }));
+  const r2 = await scanner(w).analyzeToken(w.M);
+  assert.ok(!r2.lights[0].items.some((x) => x.code === "CTL_SERIAL_CREATOR"));
+});
+
 test("assess: skipConcentration, unreadable mint, RugCheck LP signal and unknown market", async () => {
   const w = riskWorld({}, { pairCreatedAt: Date.now() - 10 * DAY });
   w.rugcheck = { [w.M]: { summary: { lpLockedPct: 3, score: 1 } } };
