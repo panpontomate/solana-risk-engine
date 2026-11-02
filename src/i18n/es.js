@@ -41,6 +41,7 @@ export default {
     CTL_KNOWN_ISSUER: (d) => "Lo controla su emisor, " + d.issuer + " (ver dependencia)",
     CTL_NONE: () => "Sin autoridades activas: nadie puede crear más ni congelar",
     CTL_SERIAL_CREATOR: (d) => "El creador ha lanzado " + d.n + " tokens más en las últimas 24 h (según RugCheck): es un lanzador en serie, que suele abandonar cada token en cuanto llegan compradores",
+    CTL_SERIAL_PAYER: (d) => "La wallet que pagó este lanzamiento ha lanzado " + d.n + " tokens más en las últimas 24 h (contado en la cadena): es un lanzador en serie, que suele abandonar cada token en cuanto llegan compradores",
     MAP_GROUP: (d) => d.n + " holders recibieron su primer SOL de la misma wallet y juntos tienen el " + pct(d.pct) + " del suministro: probablemente son la misma persona o equipo",
     MAP_SWARM: (d) => d.n + " de los " + d.of + " mayores holders recibieron su primer SOL de la misma wallet (juntos tienen el " + pct(d.pct) + "): tantas wallets con el mismo origen suelen ser un reparto del equipo",
     MAP_HUB: (d) => "Una wallet ha repartido tokens a " + d.n + " wallets: el equipo suele dividir el suministro así para parecer más repartido",
