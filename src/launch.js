@@ -1,6 +1,7 @@
 import { PUMP_PROGRAM } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { pool } from "./util.js";
+import { loadWalletBase, knownType } from "./base.js";
 
 /**
  * Pump.fun tokens a wallet launched in the last 24 h, read on chain from its latest transactions.
@@ -49,8 +50,12 @@ export async function recentLaunches(client, wallet, opts) {
  * The launcher is the first signer of the token's creation transaction: the wallet that paid, as in
  * recentLaunches (farms name a fresh creator each time but pay from one wallet). Only new tokens: past
  * 1000 transactions the creation is too far back to find cheaply.
+ * The wallet is NOT the creator RugCheck names (farms name a fresh one each time), so it comes back as
+ * `payer` with `creator: null`, and the signal is CTL_SERIAL_PAYER with its own text. A wallet the
+ * SolFlag wallet base knows as an exchange or platform (it may pay launches for many unrelated people)
+ * is not counted; opts.base: a base object, or false to skip the check.
  * Same shape as creatorLaunches, without the history of older launches (that needs market caps):
- * @returns {creator, day, total, old: 0, dead: 0, best: null, chain: true, more} or null
+ * @returns {creator: null, payer, day, total, old: 0, dead: 0, best: null, chain: true, more} or null
  */
 export async function chainLaunches(client, mint, opts) {
   opts = opts || {};
@@ -62,7 +67,11 @@ export async function chainLaunches(client, mint, opts) {
   const first = keys && keys.filter(function (k) { return k.signer; })[0];
   const wallet = first && (first.pubkey || first);
   if (!wallet || wallet === mint) return null;
+  if (opts.base !== false) {
+    const base = opts.base && typeof opts.base === "object" ? opts.base : await loadWalletBase(client);
+    if (knownType(base, wallet) === "exchange") return null;
+  }
   const r = await recentLaunches(client, wallet, { now: opts.now, limit: opts.limit });
   const day = r.mints.filter(function (m) { return m !== mint; }).length;
-  return { creator: wallet, day: day, total: day, old: 0, dead: 0, best: null, chain: true, more: r.more };
+  return { creator: null, payer: wallet, day: day, total: day, old: 0, dead: 0, best: null, chain: true, more: r.more };
 }

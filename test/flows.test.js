@@ -249,13 +249,19 @@ test("assess: without a RugCheck report the serial launcher is counted on chain 
     [W]: ["c0", "l1", "l2", "l3", "l4", "l5"].map((s, i) => ({ signature: s, blockTime: now / 1000 - 600 - i * 60 })) };
   w.txs = { c0: launch(w.M), l1: launch("A"), l2: launch("B"), l3: launch("C"), l4: launch("D"), l5: launch("E") };
   const r = await scanner(w).analyzeToken(w.M);                    // no RugCheck report in this world
-  const s = r.lights[0].items.find((x) => x.code === "CTL_SERIAL_CREATOR");
-  assert.deepEqual(s, { code: "CTL_SERIAL_CREATOR", s: "bad", data: { n: 5, creator: W } });
-  assert.equal(r.creator.chain, true);
+  const s = r.lights[0].items.find((x) => x.code === "CTL_SERIAL_PAYER");
+  assert.deepEqual(s, { code: "CTL_SERIAL_PAYER", s: "bad", data: { n: 5, payer: W } });
+  assert.ok(!r.lights[0].items.some((x) => x.code === "CTL_SERIAL_CREATOR"));   // never reported as the creator
+  assert.deepEqual([r.creator.chain, r.creator.creator, r.creator.payer], [true, null, W]);
+  // a wallet the SolFlag base knows as an exchange or platform pays for many unrelated launches: not counted
+  w.base = { wallets: { [W]: { t: "exchange" } } };
+  const rb = await scanner(w).analyzeToken(w.M);
+  assert.ok(!rb.lights[0].items.some((x) => /^CTL_SERIAL/.test(x.code)));
+  delete w.base;
   // a token past 1000 transactions: its creation is too far back, nothing is guessed
   w.sigs[w.M] = Array.from({ length: 1000 }, (_, i) => ({ signature: "x" + i, blockTime: now / 1000 - i }));
   const r2 = await scanner(w).analyzeToken(w.M);
-  assert.ok(!r2.lights[0].items.some((x) => x.code === "CTL_SERIAL_CREATOR"));
+  assert.ok(!r2.lights[0].items.some((x) => /^CTL_SERIAL/.test(x.code)));
 });
 
 test("assess: skipConcentration, unreadable mint, RugCheck LP signal and unknown market", async () => {

@@ -132,7 +132,12 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   }
   // Launch farms put out a token every few minutes and drop each one as soon as buyers arrive: in a
   // 100-token Pump.fun sample one wallet launched 7 copies of "GMS" in 10 minutes
-  if (launches && launches.day >= SERIAL_WARN) it.push(sig("CTL_SERIAL_CREATOR", launches.day >= SERIAL_BAD ? "bad" : "warn", { n: launches.day, creator: launches.creator }));
+  // counted on chain (RugCheck had no report): it is the wallet that paid the launch, not the named creator
+  if (launches && launches.day >= SERIAL_WARN) {
+    const lv = launches.day >= SERIAL_BAD ? "bad" : "warn";
+    it.push(launches.chain ? sig("CTL_SERIAL_PAYER", lv, { n: launches.day, payer: launches.payer })
+      : sig("CTL_SERIAL_CREATOR", lv, { n: launches.day, creator: launches.creator }));
+  }
   // Older launches that went nowhere: farms that spread their tokens over days escape the 24 h count
   if (launches && launches.old >= HISTORY_MIN && launches.dead / launches.old >= HISTORY_WARN) {
     const bad = launches.old >= HISTORY_BAD_MIN && launches.dead / launches.old >= HISTORY_BAD;

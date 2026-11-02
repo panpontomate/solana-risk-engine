@@ -16,6 +16,11 @@ test("Spanish texts match the original scanner", () => {
     "Liquidez baja (20.000 $) y su mercado principal puede estar fuera de Solana");
 });
 
+test("serial launcher counted on chain names the paying wallet, not the creator", () => {
+  assert.match(describe({ code: "CTL_SERIAL_PAYER", data: { n: 5, payer: "W" } }, "es"), /^La wallet que pagó este lanzamiento ha lanzado 5 tokens más en las últimas 24 h \(contado en la cadena\)/);
+  assert.match(describe({ code: "CTL_SERIAL_PAYER", data: { n: 5, payer: "W" } }, "en"), /^The wallet that paid for this launch launched 5 other tokens/);
+});
+
 test("English and fallback", () => {
   assert.equal(describe({ code: "MKT_LIQ_VERY_LOW", data: { liq: 3000 } }, "en"), "Very low liquidity ($3,000)");
   assert.equal(describe({ code: "MKT_LIQ_VERY_LOW", data: { liq: 3000 } }, "xx"), "Very low liquidity ($3,000)");
