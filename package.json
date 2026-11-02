@@ -1,10 +1,6 @@
 {
   "name": "solana-risk-engine",
-<<<<<<< HEAD
-  "version": "0.4.12",
-=======
   "version": "0.5.0",
->>>>>>> 6c1b177 (0.5.0: connectionMap (On-chain Map) on top of 0.4.5: holders typed person/bot/exchange (over 100 tx/h)/pool, first-SOL sources, groups, RugCheck transfer networks with links, young/mature signals MAP_GROUP/MAP_HUB/MAP_WHALE, 75 holders via getProgramAccounts with your own RPC)
   "description": "Explainable risk analysis for Solana tokens and wallets: creator control, real holder concentration, inflated liquidity, impostor tokens, funder clusters and PnL. Zero dependencies, runs in Node and the browser.",
   "type": "module",
   "main": "./src/index.js",
