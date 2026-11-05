@@ -47,6 +47,7 @@ export { createClient };
 export { ScanError, isCancel } from "./errors.js";
 export * from "./constants.js";
 export { isOnCurve, onCurve, b58bytes } from "./curve.js";
+export { KNOWN_WALLETS, knownWallet } from "./known.js";
 export { getTokens, getMint, getConc, getAuthKinds, isMint, accountKinds, kindOf } from "./tokens.js";
 export { getMarkets, realLiq, impostorOf, INFLATED_RATIO, geckoLiquidity, geckoPair, brandOf, copiesOf, fakeLiquidity, FAKE_LIQ_RATIO } from "./markets.js";
 export { rugcheckSummary, rugcheckReport, rugcheckGraph, netBalances, creatorLaunches, CREATOR_DEAD_MCAP } from "./rugcheck.js";

@@ -8,7 +8,13 @@ function usd(n) {
 }
 function pct(n) { return Math.round(n) + "%"; }
 function short(a) { return a.slice(0, 4) + "…" + a.slice(-4); }
-function prog(d) { return d && d.prog >= 20 ? ". Los pools y programas guardan el " + pct(d.prog) : ""; }
+function prog(d) {
+  let s = d && d.prog >= 20 ? ". Los pools y programas guardan el " + pct(d.prog) : "";
+  // exchanges con nombre: fondos de sus usuarios, no una persona que pueda vender (no cuentan)
+  if (d && d.ex >= 1) s += ". " + (d.exn && d.exn.length ? d.exn.slice(0, 2).join(" y ") + (d.exn.length > 2 ? " y otros exchanges" : "") : "Los exchanges") +
+    " guarda" + (d.exn && d.exn.length === 1 ? "" : "n") + " el " + pct(d.ex) + ": son fondos de sus usuarios y no cuentan";
+  return s;
+}
 
 const EXT = {
   permanentDelegate: "El emisor puede mover o quemar tus tokens (delegado permanente). Es normal en acciones tokenizadas, pero hay que confiar en el emisor",
@@ -56,6 +62,7 @@ export default {
     CON_SKIPPED: () => "Sin comprobar la concentración de holders",
     CON_UNAVAILABLE: () => "No se pudo comprobar la concentración de holders (el servicio no respondió; prueba otra vez en un rato)",
     CON_ALL_POOLS: (d) => "Casi todo el supply está en pools o programas" + prog(d),
+    CON_EXCHANGES: (d) => "Casi todo el supply está en exchanges, pools o programas" + prog(d),
     CON_OK: (d) => "Sin concentración preocupante (mayor wallet individual: " + pct(d.w1) + ")" + prog(d),
     CON_TRUSTED: (d) => "No cuenta: en un token de " + d.issuer + " los grandes holders son su tesorería, custodios, exchanges y protocolos",
     CON_ISSUER: (d) => "La mayor wallet tiene el " + pct(d.w1) + " y las 10 mayores el " + pct(d.w10) + ": con un emisor verificado suelen ser su tesorería, custodios, exchanges o protocolos, no cuenta como riesgo" + prog(d),

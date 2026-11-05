@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createScanner, createClient, assess, getTokens, getConc, getAuthKinds, isMint, getMarkets, takeSnapshots, diffSnapshots,
-  fetchSwaps, isOnCurve, recentLaunches, USDC, WSOL, TOKEN_2022, SYSTEM_PROGRAM, PUMP_PROGRAM, FAMOUS
+  fetchSwaps, isOnCurve, recentLaunches, USDC, WSOL, TOKEN_2022, SYSTEM_PROGRAM, PUMP_PROGRAM, FAMOUS, knownWallet, describe, buildLights
 } from "../src/index.js";
 import { fakeChain, addr, pda, pairOf, sigsOver, b58encode } from "./fakechain.js";
 import { generateKeyPairSync } from "node:crypto";
@@ -77,6 +77,30 @@ test("getConc counts people only, and falls back when owners are unknown", async
   const raw = await getConc(client({ largest: { [M]: [{ address: addr("x"), amount: 500 }] } }), M, 1000);
   assert.deepEqual(raw, { ok: false, top1: 50, top10: 50 });
   await assert.rejects(getConc(client({}), M, 1000));
+});
+
+// A named exchange hot wallet keeps its users' funds: shown by name, not counted as a whale
+test("getConc leaves named exchanges out of the count and names them", async () => {
+  const M = addr("m"), BIN = "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9", CB = "H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS", P = addr("p");
+  const world = {
+    largest: { [M]: [{ address: addr("b1"), amount: 500, owner: BIN }, { address: addr("c1"), amount: 200, owner: CB }, { address: addr("p1"), amount: 100, owner: P }] },
+    owners: { [BIN]: SYSTEM_PROGRAM, [CB]: SYSTEM_PROGRAM, [P]: SYSTEM_PROGRAM }
+  };
+  const r = await getConc(client(world), M, 1000);
+  assert.equal(r.w1, 10);
+  assert.equal(r.nW, 1);
+  assert.equal(r.ex, 70);
+  assert.deepEqual(r.exn, ["Binance", "Coinbase"]);
+  assert.equal(knownWallet(BIN).n, "Binance");
+  assert.equal(knownWallet(P), null);
+  const d = { w1: 10, prog: 0, ex: 70, exn: ["Binance", "Coinbase"] };
+  assert.equal(describe({ code: "CON_OK", data: d }, "es"), "Sin concentración preocupante (mayor wallet individual: 10%). Binance y Coinbase guardan el 70%: son fondos de sus usuarios y no cuentan");
+  assert.equal(describe({ code: "CON_OK", data: { w1: 3, ex: 62, exn: ["Binance"] } }, "en"), "No worrying concentration (largest individual wallet: 3%). Binance holds 62%: their users' funds, not counted");
+  // only exchanges among the big holders: not "pools or programs"
+  const only = await getConc(client({ largest: { [M]: [{ address: addr("b1"), amount: 900, owner: BIN }] }, owners: { [BIN]: SYSTEM_PROGRAM } }), M, 1000);
+  assert.equal(only.nW, 0);
+  const l = buildLights({ supply: 1000, decimals: 0, ext: [] }, only, pairOf(M), 0, "OPEN").find((x) => x.k === "concentration");
+  assert.equal(l.items[0].code, "CON_EXCHANGES");
 });
 
 /* ---------- markets.js ---------- */

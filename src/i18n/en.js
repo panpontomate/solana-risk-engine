@@ -5,7 +5,13 @@ function usd(n) {
 }
 function pct(n) { return Math.round(n) + "%"; }
 function short(a) { return a.slice(0, 4) + "…" + a.slice(-4); }
-function prog(d) { return d && d.prog >= 20 ? ". Pools and programs hold " + pct(d.prog) : ""; }
+function prog(d) {
+  let s = d && d.prog >= 20 ? ". Pools and programs hold " + pct(d.prog) : "";
+  // named exchanges: their users' funds, not one person who can sell (not counted)
+  if (d && d.ex >= 1) s += ". " + (d.exn && d.exn.length ? d.exn.slice(0, 2).join(" and ") + (d.exn.length > 2 ? " and other exchanges" : "") : "Exchanges") +
+    " hold" + (d.exn && d.exn.length === 1 ? "s" : "") + " " + pct(d.ex) + ": their users' funds, not counted";
+  return s;
+}
 
 const EXT = {
   permanentDelegate: "The issuer can move or burn your tokens (permanent delegate). Normal for tokenized stocks, but you have to trust the issuer",
@@ -53,6 +59,7 @@ export default {
     CON_SKIPPED: () => "Holder concentration not checked",
     CON_UNAVAILABLE: () => "Could not check holder concentration (the service did not answer; try again in a while)",
     CON_ALL_POOLS: (d) => "Almost all the supply is in pools or programs" + prog(d),
+    CON_EXCHANGES: (d) => "Almost all the supply is in exchanges, pools or programs" + prog(d),
     CON_OK: (d) => "No worrying concentration (largest individual wallet: " + pct(d.w1) + ")" + prog(d),
     CON_TRUSTED: (d) => "Not counted: in a token from " + d.issuer + " the large holders are its treasury, custodians, exchanges and protocols",
     CON_ISSUER: (d) => "The largest wallet holds " + pct(d.w1) + " and the top 10 hold " + pct(d.w10) + ": with a verified issuer these are usually its treasury, custodians, exchanges or protocols, so it does not count as a risk" + prog(d),

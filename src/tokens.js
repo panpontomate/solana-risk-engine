@@ -2,6 +2,7 @@ import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { onCurve, b58bytes } from "./curve.js";
 import { uniq } from "./util.js";
+import { knownWallet } from "./known.js";
 
 // SOL balance and every token the wallet holds (classic SPL + Token-2022), summed by mint
 export async function getTokens(client, wallet) {
@@ -118,14 +119,23 @@ export async function getConc(client, mint, supply) {
     const kind = await accountKinds(client, uniq(owners), true);   // emptied wallets (0 SOL) still count
     const agg = {};
     owners.forEach(function (o, i) { agg[o] = (agg[o] || 0) + amts[i]; });
-    const ws = [];
-    let prog = 0;
-    Object.keys(agg).forEach(function (o) { if (kind[o] === "wallet") ws.push(agg[o]); else prog += agg[o]; });
+    const ws = [], exs = {};
+    let prog = 0, ex = 0;
+    Object.keys(agg).forEach(function (o) {
+      const k = knownWallet(o);
+      if (kind[o] === "wallet" && k && k.t === "exchange") { ex += agg[o]; exs[k.n] = (exs[k.n] || 0) + agg[o]; }   // users' funds, not one person
+      else if (kind[o] === "wallet") ws.push(agg[o]);
+      else prog += agg[o];
+    });
     ws.sort(function (x, y) { return y - x; });
     out.ok = true; out.nW = ws.length;
     out.w1 = ws.length ? ws[0] / supply * 100 : 0;
     out.w10 = ws.slice(0, 10).reduce(function (s, x) { return s + x; }, 0) / supply * 100;
     out.prog = prog / supply * 100;
+    if (ex) {
+      out.ex = ex / supply * 100;
+      out.exn = Object.keys(exs).sort(function (x, y) { return exs[y] - exs[x]; });
+    }
   } catch (e) { if (isCancel(e)) throw e; }
   return out;
 }
