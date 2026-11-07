@@ -13,6 +13,9 @@ function prog(d) {
   // exchanges con nombre: fondos de sus usuarios, no una persona que pueda vender (no cuentan)
   if (d && d.ex >= 1) s += ". " + (d.exn && d.exn.length ? d.exn.slice(0, 2).join(" y ") + (d.exn.length > 2 ? " y otros exchanges" : "") : "Los exchanges") +
     " guarda" + (d.exn && d.exn.length === 1 ? "" : "n") + " el " + pct(d.ex) + ": son fondos de sus usuarios y no cuentan";
+  // creadores de mercado con nombre: sí cuentan (es su inventario y lo pueden vender)
+  if (d && d.mm >= 1 && d.mmn && d.mmn.length) s += ". " + d.mmn.slice(0, 2).join(" y ") + " (creador" + (d.mmn.length > 1 ? "es" : "") + " de mercado) " +
+    (d.mmn.length > 1 ? "tienen" : "tiene") + " el " + pct(d.mm) + ": cuenta, porque lo puede" + (d.mmn.length > 1 ? "n" : "") + " vender";
   return s;
 }
 

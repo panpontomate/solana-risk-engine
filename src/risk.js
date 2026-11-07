@@ -158,6 +158,7 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
     if (soft && st === "bad") st = "warn";
     const data = { w1: conc.w1, w10: conc.w10, prog: conc.prog, wallets: conc.nW };   // prog >= 20 is worth mentioning
     if (conc.ex) { data.ex = conc.ex; data.exn = conc.exn; }                       // named exchanges, shown but not counted
+    if (conc.mm) { data.mm = conc.mm; data.mmn = conc.mmn; }                       // named market makers, shown and counted
     let code = !conc.nW ? (conc.ex ? "CON_EXCHANGES" : "CON_ALL_POOLS") : (st === "ok" ? "CON_OK" : "CON_HIGH");
     // under a verified issuer the big holders are its treasury, custodians, exchanges and lending
     // protocols, not someone about to dump: shown, not counted (PYUSD 56% in one wallet, 1/11)

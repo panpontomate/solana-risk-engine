@@ -20,6 +20,14 @@ export const KNOWN_WALLETS = {
   "A77HErqtfN1hLLpvZ9pCtu66FEtM8BveoaKbbMoZ4RiR": { n: "Bitget", t: "exchange" },
   "88xTWZMeKfiTgbfEmPLdsUCQcZinwUfk25EBQZ21XMAZ": { n: "HTX", t: "exchange" },
   "6FEVkH17P9y8Q9aCkDdPcMDjvj7SVxrTETaYEm8f51Jy": { n: "Crypto.com", t: "exchange" },
+  // Market makers: named, but they DO count in concentration (their own inventory, they can sell).
+  // Wintermute: Solscan public names (7 Nov 2026, solscan.io/labelcloud/wintermute).
+  "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa": { n: "Wintermute", t: "market_maker" },
+  "44P5Ct5JkPz76Rs2K6juC65zXMpFRDrHatxcASJ4Dyra": { n: "Wintermute", t: "market_maker" },
+  "5sTQ5ih7xtctBhMXHr3f1aWdaXazWrWfoehqWdqWnTFP": { n: "Wintermute", t: "market_maker" },
+  "7sMiW38oLg5q9SKNoyPaH2Ee1VhpGdMCDrC4Lo4uLBBE": { n: "Wintermute", t: "market_maker" },
+  // DWF Labs: its own disclosure of its Solana buying wallet (Andrei Grachev on X, 6 May 2025)
+  "HwDkuDCUipJHHKodBBCjffFvrjhmd4iVVh7fq25fShvt": { n: "DWF Labs", t: "market_maker" },
   // off the curve, so it already counts as a program; named so it can be shown
   "1nc1nerator11111111111111111111111111111111": { n: "Incinerator", t: "burn" }
 };

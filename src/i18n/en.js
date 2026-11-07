@@ -10,6 +10,8 @@ function prog(d) {
   // named exchanges: their users' funds, not one person who can sell (not counted)
   if (d && d.ex >= 1) s += ". " + (d.exn && d.exn.length ? d.exn.slice(0, 2).join(" and ") + (d.exn.length > 2 ? " and other exchanges" : "") : "Exchanges") +
     " hold" + (d.exn && d.exn.length === 1 ? "s" : "") + " " + pct(d.ex) + ": their users' funds, not counted";
+  if (d && d.mm >= 1 && d.mmn && d.mmn.length) s += ". " + d.mmn.slice(0, 2).join(" and ") + " (market maker" + (d.mmn.length > 1 ? "s" : "") + ") " +
+    (d.mmn.length > 1 ? "hold" : "holds") + " " + pct(d.mm) + ": counted, as " + (d.mmn.length > 1 ? "they" : "it") + " can sell it";
   return s;
 }
 

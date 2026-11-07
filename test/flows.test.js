@@ -79,6 +79,23 @@ test("getConc counts people only, and falls back when owners are unknown", async
   await assert.rejects(getConc(client({}), M, 1000));
 });
 
+// A named market maker is its own inventory: named, and still counted
+test("getConc names market makers and keeps them in the count", async () => {
+  const M = addr("m"), WM = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa";
+  const world = {
+    largest: { [M]: [{ address: addr("w1"), amount: 400, owner: WM }, { address: addr("o1"), amount: 100, owner: addr("o") }] },
+    owners: { [WM]: SYSTEM_PROGRAM, [addr("o")]: SYSTEM_PROGRAM }
+  };
+  const r = await getConc(client(world), M, 1000);
+  assert.equal(r.w1, 40);
+  assert.equal(r.nW, 2);
+  assert.equal(r.mm, 40);
+  assert.deepEqual(r.mmn, ["Wintermute"]);
+  assert.equal(knownWallet(WM).t, "market_maker");
+  assert.equal(describe({ code: "CON_HIGH", data: { w1: 40, w10: 50, mm: 40, mmn: ["Wintermute"] } }, "es").endsWith("Wintermute (creador de mercado) tiene el 40%: cuenta, porque lo puede vender"), true);
+  assert.equal(describe({ code: "CON_OK", data: { w1: 3, mm: 3, mmn: ["Wintermute", "DWF Labs"] } }, "en").endsWith("Wintermute and DWF Labs (market makers) hold 3%: counted, as they can sell it"), true);
+});
+
 // A named exchange hot wallet keeps its users' funds: shown by name, not counted as a whale
 test("getConc leaves named exchanges out of the count and names them", async () => {
   const M = addr("m"), BIN = "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9", CB = "H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS", P = addr("p");

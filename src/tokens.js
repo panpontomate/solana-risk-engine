@@ -119,12 +119,15 @@ export async function getConc(client, mint, supply) {
     const kind = await accountKinds(client, uniq(owners), true);   // emptied wallets (0 SOL) still count
     const agg = {};
     owners.forEach(function (o, i) { agg[o] = (agg[o] || 0) + amts[i]; });
-    const ws = [], exs = {};
-    let prog = 0, ex = 0;
+    const ws = [], exs = {}, mms = {};
+    let prog = 0, ex = 0, mm = 0;
     Object.keys(agg).forEach(function (o) {
       const k = knownWallet(o);
       if (kind[o] === "wallet" && k && k.t === "exchange") { ex += agg[o]; exs[k.n] = (exs[k.n] || 0) + agg[o]; }   // users' funds, not one person
-      else if (kind[o] === "wallet") ws.push(agg[o]);
+      else if (kind[o] === "wallet") {
+        ws.push(agg[o]);
+        if (k && k.t === "market_maker") { mm += agg[o]; mms[k.n] = (mms[k.n] || 0) + agg[o]; }   // named, still counted
+      }
       else prog += agg[o];
     });
     ws.sort(function (x, y) { return y - x; });
@@ -135,6 +138,10 @@ export async function getConc(client, mint, supply) {
     if (ex) {
       out.ex = ex / supply * 100;
       out.exn = Object.keys(exs).sort(function (x, y) { return exs[y] - exs[x]; });
+    }
+    if (mm) {
+      out.mm = mm / supply * 100;
+      out.mmn = Object.keys(mms).sort(function (x, y) { return mms[y] - mms[x]; });
     }
   } catch (e) { if (isCancel(e)) throw e; }
   return out;
