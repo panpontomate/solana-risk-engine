@@ -217,6 +217,12 @@ test("an issuer's official mint with a new key: issuer kept, amber, never the tr
   assert.equal(issuerKeysChanged(pyusd(), PYUSD_MINT), null);
 });
 
+test("a known issuer's stock token without a permanent delegate is tokenized, not bridged (Ondo SPYon)", () => {
+  const K = { mint: "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD", frz: "51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK" };
+  const i = info({ mintAuth: K.mint, freezeAuth: K.frz, authKind: { [K.mint]: "program", [K.frz]: "wallet" }, ext: ["pausableConfig", "scaledUiAmountConfig"], extKeys: [K.mint] });
+  assert.equal(tokenType(i, pair({ baseToken: { symbol: "SPYon", name: "SPDR S&P 500 ETF (Ondo Tokenized)" } }), NOW), "TOKENIZED");
+});
+
 test("setIssuers swaps in a reviewed list and ignores broken entries", () => {
   const before = ISSUERS.map((i) => Object.assign({}, i));
   try {

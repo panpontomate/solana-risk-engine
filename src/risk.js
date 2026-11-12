@@ -58,6 +58,9 @@ export function tokenType(info, pair, now) {
   // "bridged" because its pair as base token is recent)
   if (/USD|DOLLAR|EUR/i.test(sym) && anyIssuer(info, pair && pair.baseToken && pair.baseToken.address)) return "STABLE";
   if (info.ext.indexOf("permanentDelegate") >= 0) return "TOKENIZED";
+  // a known issuer's share, fund or bond token is tokenized even without a permanent delegate (Ondo's
+  // SPYon showed "bridged", 12/11). Official exchange tokens (bnSOL, cbBTC) are not in ISSUERS and stay bridged
+  if (issuerOf(info) || issuerKeysChanged(info, pair && pair.baseToken && pair.baseToken.address)) return "TOKENIZED";
   const walletAuth = (info.mintAuth && ak[info.mintAuth] !== "program") || (info.freezeAuth && ak[info.freezeAuth] !== "program");
   if (walletAuth) return "CREATOR";
   if (info.mintAuth || info.freezeAuth) return "BRIDGED";
