@@ -47,6 +47,7 @@ export default {
     CTL_NON_TRANSFERABLE: () => "No se puede transferir",
     CTL_DEFAULT_FROZEN: () => "Las cuentas nuevas pueden crearse congeladas",
     CTL_ONLY_PROGRAMS: () => "Solo hay autoridades controladas por un programa (ver dependencia)",
+    CTL_ISSUER_KEYS_CHANGED: (d) => "Es un token oficial de " + d.issuer + ", pero tiene " + (((d.keys && d.keys.length) || 1) === 1 ? "una clave de control nueva" : d.keys.length + " claves de control nuevas") + " que aún no hemos comprobado: puede ser un cambio del emisor o una clave robada. Hasta revisarlo, no lo damos por verificado",
     CTL_KNOWN_ISSUER: (d) => "Lo controla su emisor, " + d.issuer + " (ver dependencia)",
     CTL_NONE: () => "Sin autoridades activas: nadie puede crear más ni congelar",
     CTL_SERIAL_CREATOR: (d) => "El creador ha lanzado " + d.n + " tokens más en las últimas 24 h (según RugCheck): es un lanzador en serie, que suele abandonar cada token en cuanto llegan compradores",

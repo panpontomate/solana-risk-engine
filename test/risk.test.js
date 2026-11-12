@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { issuerOf, trustedIssuer, tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, INFLATED_RATIO, USDC, WSOL, FAMOUS } from "../src/index.js";
+import { ISSUERS } from "../src/constants.js";
+import { issuerOf, trustedIssuer, issuerKeysChanged, setIssuers, tokenType, buildLights, levelFrom, dataOnly, score, reasonsFrom, realLiq, impostorOf, INFLATED_RATIO, USDC, WSOL, FAMOUS } from "../src/index.js";
 
 const DAY = 86400000;
 const NOW = Date.UTC(2026, 9, 1);
@@ -197,6 +198,33 @@ test("verified issuers past xStocks: PYUSD is Paxos, a 0% fee is no warning, its
   assert.deepEqual([anon[1].s, anon[1].items[0].code], ["bad", "CON_HIGH"]);
   // someone else's key among Paxos's is not Paxos
   assert.equal(issuerOf(pyusd({ extKeys: [PX.ctl, "Scammer1"] })), null);
+});
+
+test("an issuer's official mint with a new key: issuer kept, amber, never the trusted green (key rotation)", () => {
+  const PYUSD_MINT = "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo";
+  const p = pair({ baseToken: { address: PYUSD_MINT, symbol: "PYUSD", name: "PayPal USD" } });
+  const rot = pyusd({ freezeAuth: "NewKey1", authKind: { [PX.mint]: "wallet", NewKey1: "wallet" } });
+  assert.equal(issuerOf(rot, PYUSD_MINT), null);
+  assert.deepEqual(issuerKeysChanged(rot, PYUSD_MINT), { issuer: "Paxos", keys: ["NewKey1"] });
+  const l = buildLights(rot, pxConc, p, 0, tokenType(rot, p, NOW), null, NOW);
+  assert.deepEqual([l[0].s, l[0].items.map((x) => x.code)], ["warn", ["CTL_ISSUER_KEYS_CHANGED"]]);
+  assert.deepEqual([l[3].s, l[3].items[0].code], ["warn", "DEP_KNOWN_ISSUER"]);
+  assert.notEqual(l[1].items[0].code, "CON_TRUSTED");
+  assert.equal(levelFrom(l).lvl, "MEDIUM");
+  // the same keys on any other mint are a stranger's token, as before
+  assert.equal(issuerKeysChanged(rot, "OtherMint1"), null);
+  // all keys known: no rotation
+  assert.equal(issuerKeysChanged(pyusd(), PYUSD_MINT), null);
+});
+
+test("setIssuers swaps in a reviewed list and ignores broken entries", () => {
+  const before = ISSUERS.map((i) => Object.assign({}, i));
+  try {
+    assert.equal(setIssuers([{ name: "Bad" }, null]), before.length);   // nothing valid: built-in list stays
+    const list = before.map((i) => i.name === "Paxos" ? Object.assign({}, i, { keys: i.keys.concat(["NewKey1"]) }) : i);
+    setIssuers(list);
+    assert.equal(issuerOf(pyusd({ freezeAuth: "NewKey1" }), "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"), "Paxos");
+  } finally { setIssuers(before); }
 });
 
 test("verified but not trusted: an exchange's official token keeps its dependency and concentration rules", () => {

@@ -43,6 +43,7 @@ export default {
     CTL_NON_TRANSFERABLE: () => "Cannot be transferred",
     CTL_DEFAULT_FROZEN: () => "New accounts can be created frozen",
     CTL_ONLY_PROGRAMS: () => "Only program-controlled authorities (see dependency)",
+    CTL_ISSUER_KEYS_CHANGED: (d) => "An official " + d.issuer + " token, but it has " + (((d.keys && d.keys.length) || 1) === 1 ? "a new control key" : d.keys.length + " new control keys") + " we have not checked yet: it may be a change by the issuer or a stolen key. Until it is reviewed, we do not count it as verified",
     CTL_KNOWN_ISSUER: (d) => "Controlled by its issuer, " + d.issuer + " (see dependency)",
     CTL_NONE: () => "No active authorities: nobody can mint more or freeze",
     CTL_SERIAL_CREATOR: (d) => "The creator launched " + d.n + " other tokens in the last 24 h (per RugCheck): a serial launcher, who usually drops each token as soon as buyers arrive",

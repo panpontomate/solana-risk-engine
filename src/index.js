@@ -51,7 +51,7 @@ export { KNOWN_WALLETS, knownWallet } from "./known.js";
 export { getTokens, getMint, getConc, getAuthKinds, isMint, accountKinds, kindOf } from "./tokens.js";
 export { getMarkets, realLiq, impostorOf, INFLATED_RATIO, geckoLiquidity, geckoPair, brandOf, copiesOf, fakeLiquidity, FAKE_LIQ_RATIO } from "./markets.js";
 export { rugcheckSummary, rugcheckReport, rugcheckGraph, netBalances, creatorLaunches, CREATOR_DEAD_MCAP } from "./rugcheck.js";
-export { score, issuerOf, trustedIssuer, tokenType, buildLights, levelFrom, dataOnly, reasonsFrom, assess, SERIAL_WARN, SERIAL_BAD, HISTORY_MIN, HISTORY_WARN, HISTORY_BAD_MIN, HISTORY_BAD } from "./risk.js";
+export { score, issuerOf, trustedIssuer, issuerKeysChanged, setIssuers, tokenType, buildLights, levelFrom, dataOnly, reasonsFrom, assess, SERIAL_WARN, SERIAL_BAD, HISTORY_MIN, HISTORY_WARN, HISTORY_BAD_MIN, HISTORY_BAD } from "./risk.js";
 export { recentLaunches, chainLaunches } from "./launch.js";
 export { analyzeToken, analyzeWallet, analyzeAddress, sortResults } from "./wallet.js";
 export { holderBase, markBusy, onlyReceives, PASSIVE_SAMPLE, findFunder, findFunders, clusterByFunder, holderRows, creatorInfo, analyzeHolders,

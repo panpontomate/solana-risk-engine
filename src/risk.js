@@ -56,7 +56,7 @@ export function tokenType(info, pair, now) {
   if (/USD|DOLLAR/i.test(sym) && price > 0.97 && price < 1.03 && liq >= 200000 && ageDays >= 30) return "STABLE";
   // a verified issuer's dollar or euro token is a stablecoin whatever pair DexScreener found (USDC showed
   // "bridged" because its pair as base token is recent)
-  if (/USD|DOLLAR|EUR/i.test(sym) && issuerOf(info, pair && pair.baseToken && pair.baseToken.address)) return "STABLE";
+  if (/USD|DOLLAR|EUR/i.test(sym) && anyIssuer(info, pair && pair.baseToken && pair.baseToken.address)) return "STABLE";
   if (info.ext.indexOf("permanentDelegate") >= 0) return "TOKENIZED";
   const walletAuth = (info.mintAuth && ak[info.mintAuth] !== "program") || (info.freezeAuth && ak[info.freezeAuth] !== "program");
   if (walletAuth) return "CREATOR";
@@ -74,6 +74,37 @@ export function issuerOf(info, mint) {
   if (!keys.length) return null;
   const found = ISSUERS.find(function (i) { return keys.every(function (k) { return i.keys.indexOf(k) >= 0; }); });
   return found ? found.name : null;
+}
+
+// An issuer's official mint (listed in its mints) whose control keys are not all known any more: the
+// issuer rotated a key, or someone took one. Seeing the new key on chain does not prove it is the
+// issuer's, so until it is reviewed the token keeps its issuer but loses the trusted green.
+// Returns { issuer, keys: [the unknown keys] } or null
+export function issuerKeysChanged(info, mint) {
+  if (!mint || !info || !info.extKeys || issuerOf(info, mint)) return null;
+  const found = ISSUERS.find(function (i) { return i.mints && i.mints[mint]; });
+  if (!found) return null;
+  const fresh = [info.mintAuth, info.freezeAuth].concat(info.extKeys).filter(function (k) { return k && found.keys.indexOf(k) < 0; });
+  return fresh.length ? { issuer: found.name, keys: fresh.filter(function (k, n, a) { return a.indexOf(k) === n; }) } : null;
+}
+
+// The issuer, known or with a key rotation pending review
+function anyIssuer(info, mint) {
+  const r = issuerKeysChanged(info, mint);
+  return issuerOf(info, mint) || (r && r.issuer) || null;
+}
+
+// Replaces the issuer list with a reviewed copy (emisores.json on solflag.com), so an approved key
+// rotation does not need a new engine release. Entries without a name or keys are ignored; if none is
+// valid the built-in list stays. Returns how many issuers are in use
+export function setIssuers(list) {
+  const ok = (Array.isArray(list) ? list : []).filter(function (i) {
+    return i && typeof i.name === "string" && Array.isArray(i.keys) && i.keys.length && i.keys.every(function (k) { return typeof k === "string"; });
+  }).map(function (i) {
+    return { name: i.name, trusted: !!i.trusted, keys: i.keys.slice(), mints: i.mints && typeof i.mints === "object" ? Object.assign({}, i.mints) : undefined };
+  });
+  if (ok.length) ISSUERS.splice.apply(ISSUERS, [0, ISSUERS.length].concat(ok));
+  return ISSUERS.length;
 }
 
 // Name of the issuer when it is on SolFlag's short trusted list, or null
@@ -111,8 +142,10 @@ function mkLight(k, items, okSignal) {
 export function buildLights(info, conc, pair, value, type, rc, now, launches) {
   now = now || Date.now();
   const ak = (info && info.authKind) || {};
-  const issuer = issuerOf(info, pair && pair.baseToken && pair.baseToken.address);
-  const trusted = issuer && trustedIssuer(info, pair && pair.baseToken && pair.baseToken.address);
+  const mintAddr = pair && pair.baseToken && pair.baseToken.address;
+  const rotated = issuerKeysChanged(info, mintAddr);
+  const issuer = issuerOf(info, mintAddr) || (rotated && rotated.issuer);
+  const trusted = !rotated && issuer && trustedIssuer(info, mintAddr);
   let it;
 
   // 1) creator control
@@ -126,6 +159,8 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
       if (info.ext.indexOf("transferHook") >= 0 && hookActive(info)) it.push(sig("CTL_TRANSFER_HOOK", "warn"));
       if (info.ext.indexOf("defaultAccountState") >= 0 && bornFrozen(info)) it.push(sig("CTL_DEFAULT_FROZEN", "warn"));
     }
+    // strict while a rotation is unreviewed: amber, never the trusted green, never "fake"
+    if (rotated) it.push(sig("CTL_ISSUER_KEYS_CHANGED", "warn", { issuer: rotated.issuer, keys: rotated.keys }));
     // PYUSD and USDG carry the fee extension at 0%: under a known issuer that is how the product is built
     if (info.ext.indexOf("transferFeeConfig") >= 0 && !(issuer && info.feeBps === 0)) it.push(sig("CTL_TRANSFER_FEE", "warn"));
     if (info.ext.indexOf("nonTransferable") >= 0) it.push(sig("CTL_NON_TRANSFERABLE", "warn"));
@@ -310,7 +345,7 @@ export async function assess(client, mint, pair, opts) {
     if (brand) front.push(sig(brand.exact ? "BRAND_COPY" : "BRAND_NAME", brand.exact ? "bad" : "warn", { brand: brand.brand }));
     // the real USDC/USDT is rarely the base token of a DexScreener pair, so the search found an older
     // "USDC" and called the real one the copy (USDC and USDT showed HIGH, 1/11)
-    const canon = Object.keys(FAMOUS).some(function (k) { return FAMOUS[k] === mint; }) || !!issuerOf(info, mint);
+    const canon = Object.keys(FAMOUS).some(function (k) { return FAMOUS[k] === mint; }) || !!anyIssuer(info, mint);
     if (copies && !imp && !official && !canon) {
       const strong = copies.origLiq >= 50000 && copies.origLiq >= 10 * Math.max(copies.liq, 1);
       front.push(sig("COPYCAT", strong ? "bad" : "warn", copies));
@@ -322,7 +357,7 @@ export async function assess(client, mint, pair, opts) {
     const lf = levelFrom(lights); lvl = lf.lvl; sev = lf.sev; reasons = reasonsFrom(lights);
     // a copy of a famous token or a real company, or liquidity faked 100 times over, is high risk even
     // when everything else looks normal: it is built to look like something it is not
-    if (imp || (brand && brand.exact) || (fakeLiquidity(pair) && !issuerOf(info, mint))) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
+    if (imp || (brand && brand.exact) || (fakeLiquidity(pair) && !anyIssuer(info, mint))) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
   } else {
     const s = score(info);
     pts = s.pts; reasons = s.why; lvl = pts >= 25 ? "SPAM" : "NO_MARKET";
