@@ -193,6 +193,19 @@ export const ISSUERS = [
     "Hy9168u7b2Toujh8SJKtKK8DWbyaBbXPzxm337R4o4XY",   // EURC mint
     "6FF2CPcL6fat16QVJH6W27DeBcX7TSqbwY3a5wtyVJLC"    // EURC freeze
   ] },
+  // Ondo (12/11/2026): verified issuer, not on the trusted list. Mints from https://docs.ondo.finance/addresses
+  // (Solana). OUSG and USDon are sold only to approved investors and have no public market; the Ondo
+  // Global Markets stock tokens are not listed there by address, so they are not here yet
+  { name: "Ondo", mints: {
+    "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6": "https://docs.ondo.finance/addresses",   // USDY
+    "i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc": "https://docs.ondo.finance/addresses",   // OUSG
+    "ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo": "https://docs.ondo.finance/addresses"    // USDon
+  }, keys: [
+    "8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1",   // USDY mint
+    "51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK",   // USDY and USDon freeze
+    "6ViaRWzv7p56RfP1A9Hxy2ctu9kfE3XL43SxWuq3E4cE",   // OUSG mint and freeze
+    "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD"    // USDon mint, delegate, hook, pause, scaling
+  ] },
   { name: "Tether", trusted: true, mints: {
     "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": "https://tether.to/en/supported-protocols"
   }, keys: [

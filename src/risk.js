@@ -362,7 +362,13 @@ export async function assess(client, mint, pair, opts) {
     const s = score(info);
     pts = s.pts; reasons = s.why; lvl = pts >= 25 ? "SPAM" : "NO_MARKET";
     // an official token with no Solana pool (bgSOL trades on Bitget) is not spam: its issuer mints it
-    if (OFFICIAL_TOKENS[mint]) { pts = 0; lvl = "NO_MARKET"; reasons = [sig("DEP_KNOWN_ISSUER", "warn", { issuer: OFFICIAL_TOKENS[mint] }), sig("NO_MARKET", "na")]; }
+    // nor is a known issuer's token sold only to approved investors (Ondo's OUSG and USDon showed "probable spam", 12/11)
+    const noMktIssuer = OFFICIAL_TOKENS[mint] || anyIssuer(info, mint);
+    if (noMktIssuer) {
+      pts = 0; lvl = "NO_MARKET"; reasons = [sig("DEP_KNOWN_ISSUER", "warn", { issuer: noMktIssuer }), sig("NO_MARKET", "na")];
+      const rot = issuerKeysChanged(info, mint);
+      if (rot) reasons.unshift(sig("CTL_ISSUER_KEYS_CHANGED", "warn", { issuer: rot.issuer, keys: rot.keys }));
+    }
   }
   return {
     mint: mint, sym: base.symbol || short(mint), name: base.name || "", pts: pts, sev: sev,

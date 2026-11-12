@@ -192,6 +192,22 @@ test("assess: the real USDC is never the copy of an older 'USDC'; a newer look-a
   assert.ok(copy.reasons.some((x) => x.code === "COPYCAT"));
 });
 
+test("assess: a known issuer's token with no public market is 'no market', never spam (Ondo OUSG, 12/11)", async () => {
+  const OUSG = "i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc", K = "6ViaRWzv7p56RfP1A9Hxy2ctu9kfE3XL43SxWuq3E4cE";
+  const w = riskWorld({ mintAuthority: K, freezeAuthority: K }, null, { owners: { [K]: SYSTEM_PROGRAM } });
+  w.mints[OUSG] = w.mints[w.M]; w.largest[OUSG] = w.largest[w.M];
+  const r = await scanner(w).analyzeToken(OUSG);
+  assert.equal(r.lvl, "NO_MARKET");
+  assert.equal(r.pts, 0);
+  assert.deepEqual(r.reasons.map((x) => x.code), ["DEP_KNOWN_ISSUER", "NO_MARKET"]);
+  // the same keys on another mint, or a new key on OUSG, are not let through quietly
+  const w2 = riskWorld({ mintAuthority: "Stranger1111111111111111111111111111111111", freezeAuthority: K }, null, { owners: { Stranger1111111111111111111111111111111111: SYSTEM_PROGRAM } });
+  w2.mints[OUSG] = w2.mints[w2.M]; w2.largest[OUSG] = w2.largest[w2.M];
+  const r2 = await scanner(w2).analyzeToken(OUSG);
+  assert.equal(r2.reasons[0].code, "CTL_ISSUER_KEYS_CHANGED");
+  assert.equal(r2.lvl, "NO_MARKET");
+});
+
 test("getMint reads the transfer fee actually set", async () => {
   const w = riskWorld({ program: TOKEN_2022, extensions: [{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 0 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }] });
   const { getMint } = await import("../src/index.js");
