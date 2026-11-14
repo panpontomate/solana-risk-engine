@@ -232,6 +232,17 @@ test("assess: tokens without a market are spam or just 'no market'", async () =>
   assert.ok(!f.calls.some((c) => c.method === "getTokenLargestAccounts"));   // no market: concentration skipped
 });
 
+test("assess: without a market, an RPC failure is 'no data' and a program's mint key is not spam", async () => {
+  const down = riskWorld({ mintAuthority: addr("auth") }, null, { fail: { rpc: { getAccountInfo: 500 } } });
+  const r1 = await scanner(down).analyzeToken(down.M);
+  assert.equal(r1.lvl, "NO_DATA");
+  assert.equal(r1.reasons[0].code, "NO_INFO");
+  const prog = riskWorld({ mintAuthority: pda("pool") }, null);
+  const r2 = await scanner(prog).analyzeToken(prog.M);
+  assert.equal(r2.lvl, "NO_MARKET");
+  assert.equal(r2.reasons[0].code, "MINT_BY_PROGRAM");
+});
+
 test("assess: serial creator from RugCheck, only on markets under 7 days", async () => {
   const w = riskWorld({}, { pairCreatedAt: Date.now() - 2 * DAY });
   const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();

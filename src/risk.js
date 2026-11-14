@@ -1,7 +1,7 @@
 import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, CL_POOL_LABELS, ISSUERS, OFFICIAL_TOKENS, FAMOUS } from "./constants.js";
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
-import { getMint, getAuthKinds, getConc } from "./tokens.js";
+import { getMint, getAuthKinds, getConc, kindOf } from "./tokens.js";
 import { impostorOf, brandOf, copiesOf, fakeLiquidity, washTrades, washSignal } from "./markets.js";
 import { rugcheckSummary, creatorLaunches } from "./rugcheck.js";
 import { chainLaunches } from "./launch.js";
@@ -320,8 +320,8 @@ export async function assess(client, mint, pair, opts) {
   // Who trades it (fake volume): one GeckoTerminal request, only for a single token and a market under 90 days
   const youngMkt = pair && pair.pairCreatedAt && Date.now() - pair.pairCreatedAt < 90 * DAY;
   const washPromise = youngMkt && opts.copies && !opts.noGecko && !OFFICIAL_TOKENS[mint] ? washTrades(client, pair).catch(function (e) { if (isCancel(e)) throw e; return null; }) : Promise.resolve(null);
-  let info = null, conc = null;
-  try { info = await getMint(client, mint); } catch (e) { if (isCancel(e)) throw e; }
+  let info = null, conc = null, mintFailed = false;
+  try { info = await getMint(client, mint); } catch (e) { if (isCancel(e)) throw e; mintFailed = true; }
   if (info && info.decimals === 0 && info.supply === 1) return null;   // NFT
   // Without a market concentration is not checked: saves half the requests
   if (info && pair && (info.mintAuth || info.freezeAuth)) {
@@ -374,7 +374,16 @@ export async function assess(client, mint, pair, opts) {
     // a copy of a famous token or a real company, or liquidity faked 100 times over, is high risk even
     // when everything else looks normal: it is built to look like something it is not
     if (imp || (brand && brand.exact) || (fakeLiquidity(pair) && !anyIssuer(info, mint))) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
+  } else if (mintFailed) {
+    // the RPC did not answer: unknown, not spam (a network error showed "probable spam" and the bot sent "worse")
+    lvl = "NO_DATA"; reasons = [sig("NO_INFO", "na")];
   } else {
+    // without a market the authorities are not looked up on chain (one request per token, and a wallet holds
+    // hundreds of spam tokens): a key off the curve can only be a program's, which is all score() needs
+    if (info && !info.authKind) {
+      info.authKind = {};
+      [info.mintAuth, info.freezeAuth].forEach(function (k) { if (k) info.authKind[k] = kindOf(k, null, true); });
+    }
     const s = score(info);
     pts = s.pts; reasons = s.why; lvl = pts >= 25 ? "SPAM" : "NO_MARKET";
     // an official token with no Solana pool (bgSOL trades on Bitget) is not spam: its issuer mints it
