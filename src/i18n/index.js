@@ -37,6 +37,19 @@ export function levelLabel(result, lang) {
   return dataOnly(result) ? L.levels.MEDIUM_DATA_ONLY : (L.levels[result.lvl] || result.lvl);
 }
 
+/** Name of a tier (result or "DIAMOND"...): "Diamante", "Green"... */
+export function tierLabel(result, lang) {
+  const t = typeof result === "string" ? result : result && result.tier;
+  return t ? (pack(lang).tiers[t] || t) : "";
+}
+
+/** One line on what the tier means; for a capped newborn token, why it is not green yet */
+export function tierNote(result, lang) {
+  const L = pack(lang).tiers.notes, t = typeof result === "string" ? result : result && result.tier;
+  if (result && typeof result === "object" && result.tierCap) return L.CAP;
+  return t ? (L[t] || "") : "";
+}
+
 /** What could not be checked, e.g. "la concentración de holders y el mercado" */
 export function missingText(result, lang) {
   const L = pack(lang), and = lang === "es" ? " y " : " and ";

@@ -88,11 +88,27 @@ Methods (all accept `{ onProgress(step, fraction) }`):
 
 Every lower-level function is exported too (`buildLights`, `levelFrom`, `realLiq`, `clusterByFunder`, `chgDiff`, `pnlFromTrades`...). Most are pure functions that are easy to reuse and test.
 
+### Five tiers (0.6.0)
+
+Besides `lvl`, every token with a market gets a `tier`: what the token **is**, from most to least trustworthy. `lvl` is unchanged, so older code and data keep working.
+
+| `tier` | Meaning |
+|---|---|
+| `DIAMOND` | On SolFlag's hand-reviewed list: big projects (`BIG_PROJECTS`: Jupiter, Jito, Pyth…) and trusted issuers (Circle, Paxos…). Being on the list is enough. |
+| `GREEN` | No warning at all, and 7 days or more on the market. A memecoin can be green; it is never diamond. |
+| `YELLOW` | One mild warning, or a check that could not run, or **younger than 7 days**: a newborn token has proven nothing yet, so yellow is the best it can get (`tierCap: true`, `tierCapUntil`: when the cap ends). |
+| `ORANGE` | Two or more mild warnings and no serious one. |
+| `RED` | One serious warning is enough (a copy of another token, fake liquidity, a creator who can mint or freeze…). |
+
+Warnings are counted one by one, and "new" (`MKT_NEW`) is not one of them: age is handled by the cap. An issuer whose keys changed without review loses its diamond. `tierLabel(r, lang)` and `tierNote(r, lang)` give the name and a one-line explanation.
+
 ### Results
 
 ```js
 {
   lvl: "HIGH" | "MEDIUM" | "LOW" | "SPAM" | "NO_DATA" | "NO_MARKET",
+  tier: "DIAMOND" | "GREEN" | "YELLOW" | "ORANGE" | "RED" | null,   // null without a market (SPAM is RED)
+  tierCap: false, tierCapUntil: null, tierBig: "Jupiter" | null,
   type: "STABLE" | "TOKENIZED" | "BRIDGED" | "CREATOR" | "OPEN" | null,
   lights: [                       // null for tokens without a market
     { k: "control" | "concentration" | "market" | "dependency",

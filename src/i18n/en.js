@@ -92,6 +92,18 @@ export default {
     HIGH: "High risk", MEDIUM: "Medium risk", LOW: "Low risk", SPAM: "Likely spam",
     NO_DATA: "Not checked", NO_MARKET: "No market", MEDIUM_DATA_ONLY: "Medium due to missing data"
   },
+  // the five tiers (0.6.0): what the token is
+  tiers: {
+    DIAMOND: "Diamond", GREEN: "Green", YELLOW: "Yellow", ORANGE: "Orange", RED: "Red",
+    notes: {
+      DIAMOND: "Big project: passes everything",
+      GREEN: "Passes everything",
+      YELLOW: "Watch it",
+      ORANGE: "Danger",
+      RED: "Better not touch it",
+      CAP: "Newborn: under 7 days old, yellow is the best it can get"
+    }
+  },
   types: {
     STABLE: { label: "Stablecoin", note: "Judged by its liquidity and trust in the issuer; concentration matters less." },
     TOKENIZED: { label: "Tokenized or regulated", note: "The issuer normally keeps control (permanent delegate). The real risk is trusting the issuer and having liquidity to exit." },

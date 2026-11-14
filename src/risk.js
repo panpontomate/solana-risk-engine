@@ -5,6 +5,7 @@ import { getMint, getAuthKinds, getConc, kindOf } from "./tokens.js";
 import { impostorOf, brandOf, copiesOf, fakeLiquidity, washTrades, washSignal } from "./markets.js";
 import { rugcheckSummary, creatorLaunches } from "./rugcheck.js";
 import { chainLaunches } from "./launch.js";
+import { tierFrom } from "./tier.js";
 
 // Every finding is a "signal": {code, s, data}. `s` is ok | na | warn | bad, `data` holds the numbers
 // behind it. Turning signals into sentences is i18n's job (describe / explainLight), never the engine's.
@@ -339,7 +340,7 @@ export async function assess(client, mint, pair, opts) {
   }
   const rc = await rcPromise, launches = await launchPromise, copies = await copiesPromise, wash = await washPromise;
   const base = (pair && pair.baseToken) || {};
-  let lvl, sev = 0, reasons = [], lights = null, type = null, pts = 0, imp = null;
+  let lvl, sev = 0, reasons = [], lights = null, type = null, pts = 0, imp = null, tier = null;
   if (pair) {
     type = tokenType(info, pair);
     lights = buildLights(info, conc, pair, value, type, rc, null, launches);
@@ -373,7 +374,10 @@ export async function assess(client, mint, pair, opts) {
     const lf = levelFrom(lights); lvl = lf.lvl; sev = lf.sev; reasons = reasonsFrom(lights);
     // a copy of a famous token or a real company, or liquidity faked 100 times over, is high risk even
     // when everything else looks normal: it is built to look like something it is not
-    if (imp || (brand && brand.exact) || (fakeLiquidity(pair) && !anyIssuer(info, mint))) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
+    const forced = !!(imp || (brand && brand.exact) || (fakeLiquidity(pair) && !anyIssuer(info, mint)));
+    if (forced) { if (lvl !== "HIGH") sev += 5; lvl = "HIGH"; }
+    // five tiers (tier.js): what the token is, with a 7-day cap for newborn tokens; lvl stays as it was
+    tier = tierFrom(lights, pair, mint, { red: forced, trusted: issuerKeysChanged(info, mint) ? null : trustedIssuer(info, mint) });
   } else if (mintFailed) {
     // the RPC did not answer: unknown, not spam (a network error showed "probable spam" and the bot sent "worse")
     lvl = "NO_DATA"; reasons = [sig("NO_INFO", "na")];
@@ -386,18 +390,20 @@ export async function assess(client, mint, pair, opts) {
     }
     const s = score(info);
     pts = s.pts; reasons = s.why; lvl = pts >= 25 ? "SPAM" : "NO_MARKET";
+    if (lvl === "SPAM") tier = { tier: "RED", cap: false, capUntil: null, big: null };
     // an official token with no Solana pool (bgSOL trades on Bitget) is not spam: its issuer mints it
     // nor is a known issuer's token sold only to approved investors (Ondo's OUSG and USDon showed "probable spam", 12/11)
     const noMktIssuer = OFFICIAL_TOKENS[mint] || anyIssuer(info, mint);
     if (noMktIssuer) {
-      pts = 0; lvl = "NO_MARKET"; reasons = [sig("DEP_KNOWN_ISSUER", "warn", { issuer: noMktIssuer }), sig("NO_MARKET", "na")];
+      pts = 0; lvl = "NO_MARKET"; tier = null; reasons = [sig("DEP_KNOWN_ISSUER", "warn", { issuer: noMktIssuer }), sig("NO_MARKET", "na")];
       const rot = issuerKeysChanged(info, mint);
       if (rot) reasons.unshift(sig("CTL_ISSUER_KEYS_CHANGED", "warn", { issuer: rot.issuer, keys: rot.keys }));
     }
   }
   return {
     mint: mint, sym: base.symbol || short(mint), name: base.name || "", pts: pts, sev: sev,
-    lvl: lvl, type: type, lights: lights, reasons: reasons, impostor: imp, copies: copies, value: value, pair: pair,
+    lvl: lvl, tier: tier ? tier.tier : null, tierCap: tier ? tier.cap : false, tierCapUntil: tier ? tier.capUntil : null, tierBig: tier ? tier.big : null,
+    type: type, lights: lights, reasons: reasons, impostor: imp, copies: copies, value: value, pair: pair,
     rugcheck: rc ? { lpLockedPct: rc.lpLockedPct, score: rc.score_normalised !== undefined ? rc.score_normalised : rc.score } : null,
     creator: launches, trades: wash,
     img: (pair && pair.info && pair.info.imageUrl) || null

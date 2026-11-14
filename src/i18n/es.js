@@ -96,6 +96,18 @@ export default {
     HIGH: "Riesgo alto", MEDIUM: "Riesgo medio", LOW: "Riesgo bajo", SPAM: "Probable spam",
     NO_DATA: "Sin comprobar", NO_MARKET: "Sin mercado", MEDIUM_DATA_ONLY: "Medio por falta de datos"
   },
+  // los cinco niveles (0.6.0): lo que es el token
+  tiers: {
+    DIAMOND: "Diamante", GREEN: "Verde", YELLOW: "Amarillo", ORANGE: "Naranja", RED: "Rojo",
+    notes: {
+      DIAMOND: "Gran proyecto: cumple todo",
+      GREEN: "Cumple todo",
+      YELLOW: "Vigilar",
+      ORANGE: "Peligro",
+      RED: "Mejor ni tocarlo",
+      CAP: "Recién nacido: con menos de 7 días, el amarillo es lo máximo que puede sacar"
+    }
+  },
   types: {
     STABLE: { label: "Stablecoin", note: "Se juzga por su liquidez y por la confianza en quien la emite; la concentración pesa menos." },
     TOKENIZED: { label: "Tokenizado o regulado", note: "Lo normal es que el emisor tenga control (delegado permanente). El riesgo real es confiar en el emisor y que haya liquidez para salir." },
