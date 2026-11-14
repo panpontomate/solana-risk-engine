@@ -5,15 +5,21 @@
 //   GREEN    no warning at all and 7 days or more on the market
 //   YELLOW   one mild warning, or something that could not be checked, or younger than 7 days (the CAP: a newborn
 //            token has proven nothing yet, so YELLOW is the best it can get unless a big project is behind it)
-//   ORANGE   two or more mild warnings and no serious one
-//   RED      one serious warning is enough (a copy of another token, fake liquidity, a creator who can mint or
-//            freeze, a farm behind it...)
+//   ORANGE   danger without a trap: one serious warning that is not a trap (very low liquidity, a few wallets
+//            holding most of it: hard to sell, but nobody is deceiving you), or two or more mild warnings
+//   RED      a trap (someone can take your money or you are being deceived: TRAPS below), or two serious warnings
+// Both fail almost always at launch (registry: 99.4 % red and 99.6 % orange dead in a day): the difference is the
+// KIND of danger, not how long it lasts (decided with the user, 14/11: "there are things worse than others").
 // Warnings are counted one by one (two mild ones in the same light are two). "New" (MKT_NEW) is not counted as a
 // warning: age is handled by the cap. In the registry, one red flag on a new token already meant 99.5 % dead in a
 // day, the same as three (tools/estudio/madurez.md in escaner-solana).
 
 export const TIERS = ["DIAMOND", "GREEN", "YELLOW", "ORANGE", "RED"];
 export const NEW_CAP_DAYS = 7;
+// Serious warnings that are a trap: the creator can print more, pull the liquidity or is launching in series (or his
+// earlier tokens died), the liquidity or volume is fake, or it pretends to be another token
+export const TRAPS = ["CTL_MINT_ACTIVE", "MKT_LP_UNLOCKED", "MKT_LIQ_INFLATED", "MKT_FAKE_VOLUME", "IMPOSTOR", "BRAND_COPY",
+  "COPYCAT", "CTL_SERIAL_CREATOR", "CTL_SERIAL_PAYER", "CTL_CREATOR_HISTORY"];
 const DAY = 86400000;
 
 // Big projects with a public product and team, reviewed by hand (address checked on DexScreener on 14/11/2026).
@@ -55,11 +61,12 @@ export function tierFrom(lights, pair, mint, o) {
   if (big) { out.tier = "DIAMOND"; return out; }
   const items = [];
   (lights || []).forEach(function (l) { (l.items || []).forEach(function (x) { if (x.code !== "MKT_NEW") items.push(x); }); });
-  const bad = items.filter(function (x) { return x.s === "bad"; }).length;
+  const badItems = items.filter(function (x) { return x.s === "bad"; }), bad = badItems.length;
+  const trap = badItems.some(function (x) { return TRAPS.indexOf(x.code) >= 0; });
   const warn = items.filter(function (x) { return x.s === "warn"; }).length;
   const na = items.some(function (x) { return x.s === "na"; });
-  if (o.red || bad) { out.tier = "RED"; return out; }
-  if (warn >= 2) { out.tier = "ORANGE"; return out; }
+  if (o.red || trap || bad >= 2) { out.tier = "RED"; return out; }
+  if (bad === 1 || warn >= 2) { out.tier = "ORANGE"; return out; }
   if (warn === 1 || na) { out.tier = "YELLOW"; return out; }
   const age = ageDays(pair, now);
   // a newborn token has proven nothing yet: YELLOW at best (a big project or trusted issuer is DIAMOND above)

@@ -97,10 +97,10 @@ Besides `lvl`, every token with a market gets a `tier`: what the token **is**, f
 | `DIAMOND` | On SolFlag's hand-reviewed list: big projects (`BIG_PROJECTS`: Jupiter, Jito, Pyth…) and trusted issuers (Circle, Paxos…). Being on the list is enough. |
 | `GREEN` | No warning at all, and 7 days or more on the market. A memecoin can be green; it is never diamond. |
 | `YELLOW` | One mild warning, or a check that could not run, or **younger than 7 days**: a newborn token has proven nothing yet, so yellow is the best it can get (`tierCap: true`, `tierCapUntil`: when the cap ends). |
-| `ORANGE` | Two or more mild warnings and no serious one. |
-| `RED` | One serious warning is enough (a copy of another token, fake liquidity, a creator who can mint or freeze…). |
+| `ORANGE` | Danger without a trap: one serious warning that is not a trap (very low liquidity, a few wallets holding most of it), or two or more mild warnings. |
+| `RED` | A trap (`TRAPS`: the creator can mint more or pull the liquidity, launches in series, fake liquidity or volume, a copy of another token…), or two serious warnings. |
 
-Warnings are counted one by one, and "new" (`MKT_NEW`) is not one of them: age is handled by the cap. An issuer whose keys changed without review loses its diamond. `tierLabel(r, lang)` and `tierNote(r, lang)` give the name and a one-line explanation.
+Red and orange both fail almost always at launch; the difference is the kind of danger, not how long it lasts. Warnings are counted one by one, and "new" (`MKT_NEW`) is not one of them: age is handled by the cap. An issuer whose keys changed without review loses its diamond. `tierLabel(r, lang)` and `tierNote(r, lang)` give the name and a one-line explanation.
 
 ### Results
 

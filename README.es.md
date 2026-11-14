@@ -23,8 +23,10 @@ Además de `lvl`, cada token con mercado lleva `tier`: lo que **es** el token, d
 - `DIAMOND` (diamante): está en la lista revisada a mano de SolFlag, grandes proyectos (`BIG_PROJECTS`: Jupiter, Jito, Pyth…) y emisores de confianza (Circle, Paxos…). Estar en la lista basta.
 - `GREEN` (verde): ninguna alerta y 7 días o más de mercado. Un meme puede ser verde, nunca diamante.
 - `YELLOW` (amarillo): una alerta leve, algo que no se pudo comprobar o **menos de 7 días**: un recién nacido aún no ha demostrado nada y el amarillo es lo máximo que puede sacar (`tierCap: true`; `tierCapUntil`, cuándo acaba el techo).
-- `ORANGE` (naranja): dos o más alertas leves y ninguna grave.
-- `RED` (rojo): con una sola alerta grave ya basta.
+- `ORANGE` (naranja): peligro sin trampa. Una alerta grave que no es trampa (liquidez muy baja, pocas wallets con casi todo) o dos o más leves.
+- `RED` (rojo): una trampa (`TRAPS`: el creador puede crear más o sacar la liquidez, lanza en serie, liquidez o volumen falsos, copia de otro token…) o dos alertas graves.
+
+En los recién nacidos rojo y naranja fracasan casi siempre; la diferencia es el tipo de peligro, no cuánto duran.
 
 Las alertas se cuentan una a una y «nuevo» (`MKT_NEW`) no cuenta: la edad va por el techo. Un emisor que cambia sus claves sin revisar pierde el diamante. `tierLabel(r, "es")` y `tierNote(r, "es")` dan el nombre y una línea de explicación.
 

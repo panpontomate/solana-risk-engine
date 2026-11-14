@@ -103,8 +103,8 @@ export default {
       DIAMOND: "Gran proyecto: cumple todo",
       GREEN: "Cumple todo",
       YELLOW: "Vigilar",
-      ORANGE: "Peligro",
-      RED: "Mejor ni tocarlo",
+      ORANGE: "Peligro: algo grave, aunque sin trampa (difícil de vender o en pocas manos)",
+      RED: "Trampa: mejor ni tocarlo",
       CAP: "Recién nacido: con menos de 7 días, el amarillo es lo máximo que puede sacar"
     }
   },

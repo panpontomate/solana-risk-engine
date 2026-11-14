@@ -99,8 +99,8 @@ export default {
       DIAMOND: "Big project: passes everything",
       GREEN: "Passes everything",
       YELLOW: "Watch it",
-      ORANGE: "Danger",
-      RED: "Better not touch it",
+      ORANGE: "Danger: something serious, though not a trap (hard to sell or in few hands)",
+      RED: "A trap: better not touch it",
       CAP: "Newborn: under 7 days old, yellow is the best it can get"
     }
   },

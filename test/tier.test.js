@@ -8,8 +8,12 @@ const pair = (days, mc, liq) => ({ pairCreatedAt: NOW - days * DAY, marketCap: m
 const JUP = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
 const t = (lights, p, mint, o) => tierFrom(lights, p, mint || "Some1", Object.assign({ now: NOW }, o)).tier;
 
-test("one serious warning is red; two mild ones orange; one mild one yellow", () => {
-  assert.equal(t(L([{ code: "MKT_LIQ_VERY_LOW", s: "bad" }]), pair(30)), "RED");
+test("a trap is red; a serious warning that is not a trap is orange, two serious ones red; two mild ones orange; one mild one yellow", () => {
+  assert.equal(t(L([{ code: "MKT_LP_UNLOCKED", s: "bad" }]), pair(30)), "RED");
+  assert.equal(t(L([{ code: "CTL_SERIAL_CREATOR", s: "bad" }]), pair(30)), "RED");
+  assert.equal(t(L([{ code: "MKT_LIQ_VERY_LOW", s: "bad" }]), pair(30)), "ORANGE");
+  assert.equal(t([{ k: "concentration", s: "bad", items: [{ code: "CON_HIGH", s: "bad" }] }], pair(30)), "ORANGE");
+  assert.equal(t([{ k: "concentration", s: "bad", items: [{ code: "CON_HIGH", s: "bad" }] }, { k: "market", s: "bad", items: [{ code: "MKT_LIQ_VERY_LOW", s: "bad" }] }], pair(30)), "RED");
   assert.equal(t(L([{ code: "MKT_LIQ_LOW", s: "warn" }, { code: "MKT_VOLUME_LOW", s: "warn" }]), pair(30)), "ORANGE");
   assert.equal(t(L([{ code: "MKT_LIQ_LOW", s: "warn" }]), pair(30)), "YELLOW");
   // forced red (impostor, exact copy, fake liquidity) even with clean lights
@@ -24,7 +28,8 @@ test("newborn tokens: yellow is the cap, not the start; 'new' itself is not a wa
   // a newborn with one mild warning is yellow (not orange because of "new")
   assert.equal(t(L([{ code: "MKT_NEW", s: "warn" }, { code: "MKT_LIQ_LOW", s: "warn" }]), pair(1)), "YELLOW");
   // and it can still be red
-  assert.equal(t(L([{ code: "MKT_NEW", s: "warn" }, { code: "MKT_LIQ_VERY_LOW", s: "bad" }]), pair(0)), "RED");
+  assert.equal(t(L([{ code: "MKT_NEW", s: "warn" }, { code: "MKT_LIQ_VERY_LOW", s: "bad" }]), pair(0)), "ORANGE");
+  assert.equal(t(L([{ code: "MKT_NEW", s: "warn" }, { code: "MKT_FAKE_VOLUME", s: "bad" }]), pair(0)), "RED");
   // unknown age: capped too
   assert.equal(tierFrom(L([]), { marketCap: 1e6 }, "Some1", { now: NOW }).cap, true);
   // from day 7 it can be green
@@ -46,6 +51,6 @@ test("tier names and notes in Spanish and English", () => {
   assert.equal(tierLabel("DIAMOND", "es"), "Diamante");
   assert.equal(tierLabel({ tier: "ORANGE" }, "en"), "Orange");
   assert.equal(tierLabel(null, "es"), "");
-  assert.equal(tierNote({ tier: "RED" }, "es"), "Mejor ni tocarlo");
+  assert.equal(tierNote({ tier: "RED" }, "es"), "Trampa: mejor ni tocarlo");
   assert.match(tierNote({ tier: "YELLOW", tierCap: true }, "en"), /under 7 days/);
 });
