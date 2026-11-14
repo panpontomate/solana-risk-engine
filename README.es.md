@@ -16,6 +16,10 @@ console.log(levelLabel(r, "es"));                       // "Riesgo bajo"
 for (const l of r.lights) console.log(lightLabel(l.k, "es"), explainLight(l, "es"));
 ```
 
+## Volumen inflado (0.5.5)
+
+Al analizar un token suelto con un mercado de menos de 90 días, el motor lee las últimas ~300 operaciones de su pool principal (GeckoTerminal, una petición). Si el 80 % o más del volumen es de wallets que compran y venden lo mismo, sale `MKT_FAKE_VOLUME` en ámbar; en rojo si lo hacen 25 wallets o menos y las 3 mayores mueven el 75 % o más. En tokens veteranos los bots de arbitraje son normales y no se mira; a un emisor verificado tampoco. `noGecko` lo desactiva.
+
 ## Línea de comandos
 
 ```sh

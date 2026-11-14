@@ -111,6 +111,46 @@ export async function getMarkets(client, mints, onStep) {
   return { data: best, failed: failed };
 }
 
+/* ---------- Fake volume: who is actually trading ---------- */
+// Volume says nothing about who makes it. Wash trading inflates it with wallets that buy and sell the same
+// amount again and again, so the token looks busy and attracts buyers. Measured on the last ~300 trades of
+// the main pool (GeckoTerminal, one request): the share of volume from wallets whose buys and sells match
+// (within 20%) and how much the 3 biggest wallets move. Calibrated on 14/11/2026: 14 trending tokens 0–47%
+// round-trip; a 6-minute-old pool 96%. Arbitrage bots on veteran tokens (JUP: 3 wallets, 84% of volume) are
+// normal, so this is only applied to young markets (see risk.js).
+export const WASH_MIN_TRADES = 100;     // fewer trades are not enough to judge
+export const WASH_ROUND_TRIP = 80;      // % of volume from wallets that buy and sell the same
+export const WASH_FEW_WALLETS = 25, WASH_TOP3 = 75;   // also few wallets doing most of it: red
+
+// trades: GeckoTerminal trade attributes. Returns {n, wallets, top3, rt, mins} (percentages 0–100) or null
+export function washStats(trades) {
+  const t = (Array.isArray(trades) ? trades : []).filter(function (x) { return x && x.tx_from_address && Number(x.volume_in_usd) > 0; });
+  if (!t.length) return null;
+  const w = {};
+  t.forEach(function (x) { const o = w[x.tx_from_address] || (w[x.tx_from_address] = { b: 0, s: 0 }); o[x.kind === "buy" ? "b" : "s"] += Number(x.volume_in_usd); });
+  const ws = Object.keys(w).map(function (k) { return w[k]; });
+  const tot = ws.reduce(function (a, o) { return a + o.b + o.s; }, 0);
+  if (!tot) return null;
+  const sizes = ws.map(function (o) { return o.b + o.s; }).sort(function (a, b) { return b - a; });
+  const rt = ws.filter(function (o) { return o.b > 0 && o.s > 0 && Math.abs(o.b - o.s) <= 0.2 * (o.b + o.s); }).reduce(function (a, o) { return a + o.b + o.s; }, 0);
+  const times = t.map(function (x) { return Date.parse(x.block_timestamp); }).filter(function (v) { return v > 0; });
+  return { n: t.length, wallets: ws.length, top3: Math.round(100 * (sizes[0] + (sizes[1] || 0) + (sizes[2] || 0)) / tot), rt: Math.round(100 * rt / tot),
+    mins: times.length ? Math.round((Math.max.apply(null, times) - Math.min.apply(null, times)) / 60000) : null };
+}
+
+// The signal for those stats, or null: {code, s, data}
+export function washSignal(st) {
+  if (!st || st.n < WASH_MIN_TRADES || st.rt < WASH_ROUND_TRIP) return null;
+  const few = st.wallets <= WASH_FEW_WALLETS && st.top3 >= WASH_TOP3;
+  return { code: "MKT_FAKE_VOLUME", s: few ? "bad" : "warn", data: { rt: st.rt, wallets: st.wallets, trades: st.n, top3: st.top3, few: few } };
+}
+
+export async function washTrades(client, pair) {
+  if (!pair || !pair.pairAddress) return null;
+  const j = await client.softJson(GECKO + "pools/" + pair.pairAddress + "/trades", 6000);
+  return washStats(((j && j.data) || []).map(function (x) { return x && x.attributes; }));
+}
+
 /* ---------- GeckoTerminal: fills two DexScreener gaps on Pump.fun ---------- */
 // Both are optional extras: on any failure the market stays exactly as DexScreener gave it.
 

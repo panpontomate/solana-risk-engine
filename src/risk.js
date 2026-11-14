@@ -2,7 +2,7 @@ import { EXT_POINTS, RANKS, PUMP_CURVE_DEXES, CL_POOL_LABELS, ISSUERS, OFFICIAL_
 import { isCancel } from "./errors.js";
 import { short, sleep } from "./util.js";
 import { getMint, getAuthKinds, getConc } from "./tokens.js";
-import { impostorOf, brandOf, copiesOf, fakeLiquidity } from "./markets.js";
+import { impostorOf, brandOf, copiesOf, fakeLiquidity, washTrades, washSignal } from "./markets.js";
 import { rugcheckSummary, creatorLaunches } from "./rugcheck.js";
 import { chainLaunches } from "./launch.js";
 
@@ -296,6 +296,7 @@ export function reasonsFrom(lights) {
  * @param [opts.marketUnknown]   the DexScreener batch for this mint failed: no data, not "no market"
  * @param [opts.skipConcentration]
  * @param [opts.skipCreator]     do not ask RugCheck what else the creator launched (markets under 7 days only)
+ * @param [opts.noGecko]         do not ask GeckoTerminal who trades it (fake volume)
  * @returns null for NFTs, otherwise {mint, sym, name, lvl, sev, pts, type, lights, reasons, impostor, value, pair, img}
  */
 export async function assess(client, mint, pair, opts) {
@@ -316,6 +317,9 @@ export async function assess(client, mint, pair, opts) {
   }) : Promise.resolve(null);
   // Copies of the same name and ticker: one search per token, so only when asked (a single token, not a wallet)
   const copiesPromise = pair && opts.copies && !OFFICIAL_TOKENS[mint] ? copiesOf(client, mint, pair).catch(function (e) { if (isCancel(e)) throw e; return null; }) : Promise.resolve(null);
+  // Who trades it (fake volume): one GeckoTerminal request, only for a single token and a market under 90 days
+  const youngMkt = pair && pair.pairCreatedAt && Date.now() - pair.pairCreatedAt < 90 * DAY;
+  const washPromise = youngMkt && opts.copies && !opts.noGecko && !OFFICIAL_TOKENS[mint] ? washTrades(client, pair).catch(function (e) { if (isCancel(e)) throw e; return null; }) : Promise.resolve(null);
   let info = null, conc = null;
   try { info = await getMint(client, mint); } catch (e) { if (isCancel(e)) throw e; }
   if (info && info.decimals === 0 && info.supply === 1) return null;   // NFT
@@ -333,7 +337,7 @@ export async function assess(client, mint, pair, opts) {
       catch (e) { if (isCancel(e)) throw e; conc = null; if (!tryC) await sleep(client.retryDelayMs === undefined ? 1500 : client.retryDelayMs); }
     }
   }
-  const rc = await rcPromise, launches = await launchPromise, copies = await copiesPromise;
+  const rc = await rcPromise, launches = await launchPromise, copies = await copiesPromise, wash = await washPromise;
   const base = (pair && pair.baseToken) || {};
   let lvl, sev = 0, reasons = [], lights = null, type = null, pts = 0, imp = null;
   if (pair) {
@@ -357,6 +361,15 @@ export async function assess(client, mint, pair, opts) {
       const prev = lights[0], st = front.some(function (x) { return x.s === "bad"; }) ? "bad" : (prev.s === "bad" ? "bad" : "warn");
       lights[0] = { k: "control", s: st, items: front.concat(prev.s !== "ok" ? prev.items : []) };
     }
+    // fake volume goes into "market and exit"; a verified issuer's market is left alone
+    const ws = anyIssuer(info, mint) ? null : washSignal(wash);
+    if (ws) {
+      const mk = lights.filter(function (l) { return l.k === "market"; })[0];
+      if (mk) {
+        const items = (mk.s === "ok" ? [] : mk.items).concat([sig(ws.code, ws.s, ws.data)]);
+        lights[lights.indexOf(mk)] = mkLight("market", items);
+      }
+    }
     const lf = levelFrom(lights); lvl = lf.lvl; sev = lf.sev; reasons = reasonsFrom(lights);
     // a copy of a famous token or a real company, or liquidity faked 100 times over, is high risk even
     // when everything else looks normal: it is built to look like something it is not
@@ -377,7 +390,7 @@ export async function assess(client, mint, pair, opts) {
     mint: mint, sym: base.symbol || short(mint), name: base.name || "", pts: pts, sev: sev,
     lvl: lvl, type: type, lights: lights, reasons: reasons, impostor: imp, copies: copies, value: value, pair: pair,
     rugcheck: rc ? { lpLockedPct: rc.lpLockedPct, score: rc.score_normalised !== undefined ? rc.score_normalised : rc.score } : null,
-    creator: launches,
+    creator: launches, trades: wash,
     img: (pair && pair.info && pair.info.imageUrl) || null
   };
 }

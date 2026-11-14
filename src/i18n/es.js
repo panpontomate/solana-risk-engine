@@ -76,6 +76,7 @@ export default {
     MKT_LIQ_INFLATED: (d) => "Liquidez inflada: DexScreener dice " + usd(d.reported) + ", pero el pool solo tiene unos " + usd(d.real) + " en tokens de verdad (USDC, USDT o SOL). Es lo máximo que podrías sacar al vender" + (d.reported >= 100 * Math.max(d.real, 1) ? ". Una diferencia así no es casual: está montada para que el token parezca establecido" : ""),
     MKT_LIQ_VERY_LOW: (d) => "Liquidez muy baja (" + usd(d.liq) + ")",
     MKT_LIQ_LOW: (d) => "Liquidez baja (" + usd(d.liq) + ")",
+    MKT_FAKE_VOLUME: (d) => "Volumen inflado: el " + d.rt + " % del volumen de las últimas " + d.trades + " operaciones es de wallets que compran y venden lo mismo" + (d.few ? ", y solo " + d.wallets + " wallets lo mueven casi todo (las 3 mayores, el " + d.top3 + " %)" : "") + ". Ese volumen no son compradores nuevos: hace que el token parezca más activo de lo que es",
     MKT_VOLUME_LOW: (d) => "Volumen de 24 h casi nulo (" + usd(d.vol) + ")",
     MKT_NEW: (d) => "Mercado muy nuevo (" + (d.days < 1 ? "menos de un día" : d.days + (d.days === 1 ? " día" : " días")) + ")",
     MKT_POSITION_HEAVY: (d) => "La posición de esta wallet equivale al " + pct(d.pct) + " de la liquidez: vender de golpe movería mucho el precio",

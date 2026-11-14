@@ -72,6 +72,7 @@ export default {
     MKT_LIQ_INFLATED: (d) => "Inflated liquidity: DexScreener says " + usd(d.reported) + ", but the pool only has about " + usd(d.real) + " in real tokens (USDC, USDT or SOL). That is the most you could get out when selling" + (d.reported >= 100 * Math.max(d.real, 1) ? ". A gap like that is no accident: it is set up to make the token look established" : ""),
     MKT_LIQ_VERY_LOW: (d) => "Very low liquidity (" + usd(d.liq) + ")",
     MKT_LIQ_LOW: (d) => "Low liquidity (" + usd(d.liq) + ")",
+    MKT_FAKE_VOLUME: (d) => "Inflated volume: " + d.rt + "% of the volume in the last " + d.trades + " trades comes from wallets that buy and sell the same amount" + (d.few ? ", and only " + d.wallets + " wallets make almost all of it (the top 3, " + d.top3 + "%)" : "") + ". That volume is not new buyers: it makes the token look busier than it is",
     MKT_VOLUME_LOW: (d) => "Almost no 24h volume (" + usd(d.vol) + ")",
     MKT_NEW: (d) => "Very new market (" + (d.days < 1 ? "less than a day" : d.days + (d.days === 1 ? " day" : " days")) + ")",
     MKT_POSITION_HEAVY: (d) => "This wallet's position equals " + pct(d.pct) + " of the liquidity: selling at once would move the price a lot",
