@@ -102,6 +102,12 @@ Besides `lvl`, every token with a market gets a `tier`: what the token **is**, f
 
 Red and orange both fail almost always at launch; the difference is the kind of danger, not how long it lasts. Warnings are counted one by one, and "new" (`MKT_NEW`) is not one of them: age is handled by the cap. An issuer whose keys changed without review loses its diamond. `tierLabel(r, lang)` and `tierNote(r, lang)` give the name and a one-line explanation.
 
+### Points by section (0.7.0)
+
+A meme, a tokenized stock and a DeFi token are not judged the same way. `scoreProfile(res, perfil)` (or `analyzeToken(client, mint, { perfil })`, which adds `res.perfil`) puts the token in one of seven sections — `meme`, `rwa`, `defi`, `juegos` (games), `ia` (AI), `apps`, `otros` (other) — and scores it on a base of 50 with that section's rules: who is behind it and its reserves for tokenized assets, fees, revenue, audits and hacks for DeFi, real activity for games, public code for AI, whether the token earns from the business (buybacks, burns) for apps. It is a pure function: the data that is not on chain comes in `perfil`, one entry of a daily file (SolFlag builds it from DefiLlama, Jupiter, GitHub and Streamflow). Without it, a known issuer is `rwa` and anything else is scored with the meme rules, which only use the chain.
+
+It returns `{ap, pts, tier, cap, floor, trap, checks}`: `pts` fills a bar up to 110, `checks` gives each check its colour (`suma`, `resta`, `grave`, `neutro`, `falta` = not known yet, never counted). Fixed rules: a trap is red; diamond only for the hand-reviewed list with 90 points or more, and the list is green at least; a token born in a launchpad is scored as a meme (green at best) and is yellow at best under 7 days. `lvl` and `tier` stay as they were.
+
 ### Results
 
 ```js

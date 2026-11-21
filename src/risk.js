@@ -6,6 +6,7 @@ import { impostorOf, brandOf, copiesOf, fakeLiquidity, washTrades, washSignal } 
 import { rugcheckSummary, creatorLaunches } from "./rugcheck.js";
 import { chainLaunches } from "./launch.js";
 import { tierFrom } from "./tier.js";
+import { scoreProfile } from "./perfil.js";
 
 // Every finding is a "signal": {code, s, data}. `s` is ok | na | warn | bad, `data` holds the numbers
 // behind it. Turning signals into sentences is i18n's job (describe / explainLight), never the engine's.
@@ -298,7 +299,9 @@ export function reasonsFrom(lights) {
  * @param [opts.skipConcentration]
  * @param [opts.skipCreator]     do not ask RugCheck what else the creator launched (markets under 7 days only)
  * @param [opts.noGecko]         do not ask GeckoTerminal who trades it (fake volume)
- * @returns null for NFTs, otherwise {mint, sym, name, lvl, sev, pts, type, lights, reasons, impostor, value, pair, img}
+ * @param [opts.perfil]          the token's entry in the daily perfiles.json (or null if it is not there): adds
+ *                               `perfil` = points by section (scoreProfile in perfil.js). Left out: no `perfil`
+ * @returns null for NFTs, otherwise {mint, sym, name, lvl, sev, pts, type, lights, reasons, impostor, value, pair, img, perfil?}
  */
 export async function assess(client, mint, pair, opts) {
   opts = opts || {};
@@ -400,7 +403,7 @@ export async function assess(client, mint, pair, opts) {
       if (rot) reasons.unshift(sig("CTL_ISSUER_KEYS_CHANGED", "warn", { issuer: rot.issuer, keys: rot.keys }));
     }
   }
-  return {
+  const out = {
     mint: mint, sym: base.symbol || short(mint), name: base.name || "", pts: pts, sev: sev,
     lvl: lvl, tier: tier ? tier.tier : null, tierCap: tier ? tier.cap : false, tierCapUntil: tier ? tier.capUntil : null, tierBig: tier ? tier.big : null,
     type: type, lights: lights, reasons: reasons, impostor: imp, copies: copies, value: value, pair: pair,
@@ -408,4 +411,8 @@ export async function assess(client, mint, pair, opts) {
     creator: launches, trades: wash,
     img: (pair && pair.info && pair.info.imageUrl) || null
   };
+  // points by section (perfil.js, 21/11): only with a market and when the caller passes the daily profile
+  // (opts.perfil: the entry of perfiles.json, or null for a token not in it). lvl and tier stay as they were
+  if (pair && opts.perfil !== undefined) out.perfil = scoreProfile(out, opts.perfil);
+  return out;
 }
