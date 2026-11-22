@@ -1,7 +1,7 @@
 // An in-memory Solana + DexScreener + RugCheck + Helius + CoinGecko, answering through a fake fetch.
 // Describe the world declaratively and every engine function can run end to end against it.
 import { createHash } from "node:crypto";
-import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, DEX_SEARCH, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO, WALLET_BASE_URL } from "../src/constants.js";
+import { TOKEN_PROGRAM, TOKEN_2022, SYSTEM_PROGRAM, DEX, DEX_PAIRS, DEX_SEARCH, RUGCHECK, HELIUS_API, COINGECKO_SOL, GECKO, WALLET_BASE_URL } from "../src/constants.js";
 import { onCurve, b58bytes } from "../src/curve.js";
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -121,6 +121,12 @@ export function fakeChain(world) {
 
   function http(url) {
     if (url.indexOf(DEX_SEARCH) === 0) return { pairs: w.search || [] };
+    if (url.indexOf(DEX_PAIRS) === 0) {
+      if (w.fail.dex === "network") throw new TypeError("fetch failed");
+      if (w.fail.dex || w.fail.dexPairs) return { __status: 500 };
+      const m = url.slice(DEX_PAIRS.length);
+      return w.pairs.filter((p) => p.baseToken.address === m || (p.quoteToken && p.quoteToken.address === m));
+    }
     if (url.indexOf(DEX) === 0) {
       if (w.fail.dex === "network") throw new TypeError("fetch failed");
       if (w.fail.dex) return { __status: 500 };

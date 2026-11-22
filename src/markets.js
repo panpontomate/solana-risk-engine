@@ -1,4 +1,4 @@
-import { DEX, DEX_SEARCH, GECKO, USDC, USDT, WSOL, FAMOUS, BRANDS, brandKey, BRAND_MATURE_DAYS, BRAND_MATURE_LIQ, COPY_MIN_LIQ } from "./constants.js";
+import { DEX, DEX_PAIRS, DEX_SEARCH, GECKO, USDC, USDT, WSOL, FAMOUS, BRANDS, brandKey, BRAND_MATURE_DAYS, BRAND_MATURE_LIQ, COPY_MIN_LIQ } from "./constants.js";
 import { ScanError, isCancel } from "./errors.js";
 import { sleep } from "./util.js";
 
@@ -88,6 +88,22 @@ export async function copiesOf(client, mint, pair, now) {
 export async function getMarkets(client, mints, onStep) {
   const best = {};
   let failed = [];
+  // One token (the scanner's usual case): ask for all its pools and keep the deepest one where it is the
+  // base token. If that fails or finds nothing, fall back to the batch request below.
+  if (mints.length === 1) {
+    const m = mints[0];
+    try {
+      const pares = await client.jfetch(DEX_PAIRS + m);
+      if (Array.isArray(pares)) pares.forEach(function (p) {
+        if (!p || !p.baseToken || p.baseToken.address !== m || (p.chainId && p.chainId !== "solana")) return;
+        realLiq(p);
+        const liq = (p.liquidity && p.liquidity.usd) || 0;
+        const cur = best[m] && best[m].liquidity && best[m].liquidity.usd || 0;
+        if (!best[m] || liq > cur) best[m] = p;
+      });
+    } catch (e) { if (isCancel(e)) throw e; }
+    if (best[m]) { if (onStep) onStep(1, 1); return { data: best, failed: failed }; }
+  }
   for (let i = 0; i < mints.length; i += 30) {
     const lote = mints.slice(i, i + 30);
     try {

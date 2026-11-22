@@ -5,6 +5,9 @@
 export const PUBLIC_RPC = "https://solana-rpc.publicnode.com";
 export const VIBE_RPC = "https://public.rpc.solanavibestation.com";
 export const DEX = "https://api.dexscreener.com/tokens/v1/solana/";
+// All pools of ONE token (up to 30). tokens/v1 returns a single pool per token, not always the deepest
+// (22/11/2026: WIF showed an $87k Orca pool while its Raydium pool had $3.6M)
+export const DEX_PAIRS = "https://api.dexscreener.com/token-pairs/v1/solana/";
 // SolFlag's wallet base (see base.js)
 export const WALLET_BASE_URL = "https://solflag.com/datos/base.json";
 export const DEX_SEARCH = "https://api.dexscreener.com/latest/dex/search?q=";

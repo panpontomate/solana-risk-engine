@@ -150,6 +150,22 @@ test("getMarkets: a failed batch is 'unknown', an unreachable DexScreener is an 
   await assert.rejects(getMarkets(createClient({ fetch: fakeChain({ fail: { dex: "network" } }), retryDelayMs: 0 }), mints), (e) => e.code === "DEX_UNREACHABLE");
 });
 
+test("getMarkets with one token asks for all its pools and keeps its deepest one as base", async () => {
+  const M = addr("onepool"), OTHER = addr("otherbase");
+  const deep = pairOf(M, { liquidity: { usd: 3500000 }, pairAddress: "deep" });
+  const thin = pairOf(M, { liquidity: { usd: 87000 }, pairAddress: "thin" });
+  const asQuote = pairOf(OTHER, { quoteToken: { address: M }, liquidity: { usd: 9000000 }, pairAddress: "quote" });
+  const urls = [];
+  const fc = fakeChain({ pairs: [thin, deep, asQuote] });
+  const f = async (url, o) => { urls.push(String(url)); return fc(url, o); };
+  const r = await getMarkets(createClient({ fetch: f, retryDelayMs: 0 }), [M]);
+  assert.equal(r.data[M].pairAddress, "deep");     // not the pool where it is only the quote token
+  assert.ok(urls.some((u) => u.indexOf("token-pairs/v1") >= 0), urls.join(" "));
+  // if that request fails, the batch request still answers
+  const r2 = await getMarkets(createClient({ fetch: fakeChain({ pairs: [thin], fail: { dexPairs: true } }), retryDelayMs: 0 }), [M]);
+  assert.equal(r2.data[M].pairAddress, "thin");
+});
+
 /* ---------- risk.js assess ---------- */
 
 function riskWorld(mintInfo, pair, extra) {
