@@ -83,27 +83,55 @@ export async function copiesOf(client, mint, pair, now) {
   return { n: others.length, original: oldest.addr, days: Math.floor(((now || Date.now()) - oldest.at) / 86400000), origLiq: oldest.liq, liq: mine.liq };
 }
 
-// Best (most liquid) DexScreener pair per mint, 30 mints per request.
+// Up to this many tokens, each one gets its own request for all its pools (token-pairs/v1, 4 at a time).
+// The batch request (tokens/v1) returns a single pool per token, not always the deepest: measured
+// 22/11/2026 on 99 tokens, 15 came out with a much smaller pool (RUSH $0.6M instead of $42M).
+// Bigger lists (a wallet with hundreds of tokens) stay on the batch request to respect DexScreener's limits.
+export const PAIRS_MAX = 30;
+
+// Best (most liquid) DexScreener pair per mint.
 // `failed` lists mints whose batch failed: unknown, which is not the same as "no market".
 export async function getMarkets(client, mints, onStep) {
   const best = {};
   let failed = [];
-  // One token (the scanner's usual case): ask for all its pools and keep the deepest one where it is the
-  // base token. If that fails or finds nothing, fall back to the batch request below.
-  if (mints.length === 1) {
-    const m = mints[0];
-    try {
-      const pares = await client.jfetch(DEX_PAIRS + m);
-      if (Array.isArray(pares)) pares.forEach(function (p) {
-        if (!p || !p.baseToken || p.baseToken.address !== m || (p.chainId && p.chainId !== "solana")) return;
-        realLiq(p);
-        const liq = (p.liquidity && p.liquidity.usd) || 0;
-        const cur = best[m] && best[m].liquidity && best[m].liquidity.usd || 0;
-        if (!best[m] || liq > cur) best[m] = p;
-      });
-    } catch (e) { if (isCancel(e)) throw e; }
-    if (best[m]) { if (onStep) onStep(1, 1); return { data: best, failed: failed }; }
+  const keep = function (m, p) {
+    realLiq(p);
+    const liq = (p.liquidity && p.liquidity.usd) || 0;
+    const cur = best[m] && best[m].liquidity && best[m].liquidity.usd || 0;
+    if (!best[m] || liq > cur) best[m] = p;
+  };
+  if (mints.length <= PAIRS_MAX) {
+    let next = 0, done = 0;
+    const worker = async function () {
+      while (next < mints.length) {
+        const m = mints[next++];
+        try {
+          const pares = await client.jfetch(DEX_PAIRS + m);
+          if (Array.isArray(pares)) pares.forEach(function (p) {
+            if (p && p.baseToken && p.baseToken.address === m && (!p.chainId || p.chainId === "solana")) keep(m, p);
+          });
+        } catch (e) { if (isCancel(e)) throw e; }
+        done++;
+        if (onStep && done < mints.length) onStep(done, mints.length);
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()].slice(0, Math.min(4, mints.length)));
+    // what got no answer (or no market) goes once more through the batch request
+    const rest = mints.filter(function (m) { return !best[m]; });
+    if (!rest.length) { if (onStep && mints.length) onStep(mints.length, mints.length); return { data: best, failed: failed }; }
+    const again = await batchMarkets(client, rest);
+    Object.keys(again.data).forEach(function (m) { best[m] = again.data[m]; });
+    if (onStep) onStep(mints.length, mints.length);
+    return { data: best, failed: again.failed };
   }
+  const r = await batchMarkets(client, mints, onStep);
+  return r;
+}
+
+// 30 mints per request (tokens/v1)
+async function batchMarkets(client, mints, onStep) {
+  const best = {};
+  let failed = [];
   for (let i = 0; i < mints.length; i += 30) {
     const lote = mints.slice(i, i + 30);
     try {
