@@ -51,6 +51,7 @@ test("a PDA owned by the System Program is still a program, not a person", async
   assert.deepEqual(await getAuthKinds(c, { mintAuth: STAKE_PDA, freezeAuth: null }), { [STAKE_PDA]: "program" });
   const conc = await getConc(c, M, 1000);
   assert.equal(conc.w1, 10);        // the AMM authority's 80% is not a whale
+  assert.equal(conc.w1a, P);        // 0.8.1: who that biggest person-wallet is (0.8.0 left it empty)
   assert.equal(conc.prog, 80);
   const w = { mints: { [M]: { supply: 1000, decimals: 0, mintAuthority: STAKE_PDA } }, owners: { [STAKE_PDA]: SYSTEM_PROGRAM, [POOL_AUTH]: SYSTEM_PROGRAM, [P]: SYSTEM_PROGRAM },
     largest: { [M]: [{ address: addr("vault"), amount: 800, owner: POOL_AUTH }, { address: addr("pa"), amount: 100, owner: P }] }, pairs: [pairOf(M)] };

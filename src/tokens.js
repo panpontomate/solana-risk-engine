@@ -125,7 +125,7 @@ export async function getConc(client, mint, supply) {
       const k = knownWallet(o);
       if (kind[o] === "wallet" && k && k.t === "exchange") { ex += agg[o]; exs[k.n] = (exs[k.n] || 0) + agg[o]; }   // users' funds, not one person
       else if (kind[o] === "wallet") {
-        ws.push(agg[o]);
+        ws.push(agg[o]); wo.push([o, agg[o]]);
         if (k && k.t === "market_maker") { mm += agg[o]; mms[k.n] = (mms[k.n] || 0) + agg[o]; }   // named, still counted
       }
       else prog += agg[o];
