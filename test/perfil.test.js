@@ -18,6 +18,16 @@ test("meme: WIF, verde 80 (tope de una meme)", () => {
   assert.equal(r.ap, "meme"); assert.equal(r.pts, 80); assert.equal(r.tier, "GREEN");
 });
 
+test("meme: $ANSEM (24/11): una wallet de persona con el 49,2 % no pasa de naranja", () => {
+  const r = pts(res("9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump", { codes: ["CTL_NONE"], w1: 49.2, w10: 57.7, liq: 754228, vol: 11632665, dias: 161 }), null);
+  assert.equal(r.checks.find((x) => x.k === "wallet").p, -34);
+  assert.equal(r.tier, "ORANGE");
+  const alto = pts(res("Alto11111111111111111111111111111111111pump", { codes: ["CTL_NONE"], w1: 41, w10: 20, liq: 3e6, vol: 9e6, dias: 900 }), null);
+  assert.ok(alto.pts >= 50); assert.equal(alto.tier, "ORANGE"); assert.equal(alto.capWallet, true);
+  const pocoMenos = pts(res("Menos1111111111111111111111111111111111pump", { codes: ["CTL_NONE"], w1: 39, w10: 20, liq: 3e6, vol: 9e6, dias: 900 }), null);
+  assert.equal(pocoMenos.capWallet, false);
+});
+
 test("meme: menos de 7 días no pasa de amarillo; una trampa es rojo; muerto es rojo", () => {
   const nuevo = pts(res("Nuevo1111111111111111111111111111111111pump", { codes: ["CTL_NONE"], w1: 3, w10: 15, liq: 300000, vol: 900000, dias: 3 }), null);
   assert.equal(nuevo.tier, "YELLOW"); assert.equal(nuevo.cap, true); assert.ok(nuevo.pts >= 75);
@@ -52,13 +62,13 @@ test("juego: CARDS, verde 100", () => {
   assert.equal(r.pts, 100); assert.equal(r.tier, "GREEN");
 });
 
-test("IA: NOS verde 100; Swarms (nacido en Pump.fun) verde 75 con reglas de meme + código", () => {
+test("IA: NOS verde 100; Swarms (nacido en Pump.fun) amarillo 71 con reglas de meme + código (wallet del 33,8 %: -19 desde el 24/11)", () => {
   const nos = pts(res("nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7", { codes: ["CTL_NONE"], w1: 3.1, w10: 18, liq: 169000, dias: 372 }),
     { ap: "ia", cod: { dias: 1 }, trad: 524, org: 75, tit: 50029, dl: { lib: 0, bloq: 0 } });
   assert.equal(nos.pts, 100); assert.equal(nos.tier, "GREEN");
   const sw = pts(res("74SBV4zDXxTRgv1pEMoECskKBkZHc2yGPnc7GYVepump", { codes: ["CTL_NONE"], w1: 33.8, w10: 44.5, liq: 951880, vol: 89494, dias: 701 }),
     { ap: "ia", cod: { dias: 0 } });
-  assert.equal(sw.lanz, true); assert.equal(sw.pts, 75); assert.equal(sw.tier, "GREEN");
+  assert.equal(sw.lanz, true); assert.equal(sw.pts, 71); assert.equal(sw.tier, "YELLOW");
   const sinCodigo = pts(res("Perle1111111111111111111111111111111111111", { codes: ["CTL_NONE"], w1: 30.8, w10: 92, liq: 10081, dias: 240 }), { ap: "ia", trad: 18, org: 0, tit: 1960 });
   assert.equal(sinCodigo.checks.find((x) => x.k === "codigo").col, "falta");
   assert.equal(sinCodigo.pts, 25); assert.equal(sinCodigo.tier, "ORANGE");

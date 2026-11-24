@@ -54,7 +54,7 @@ export { rugcheckSummary, rugcheckReport, rugcheckGraph, netBalances, creatorLau
 export { score, issuerOf, trustedIssuer, issuerKeysChanged, setIssuers, tokenType, buildLights, levelFrom, dataOnly, reasonsFrom, assess, SERIAL_WARN, SERIAL_BAD, HISTORY_MIN, HISTORY_WARN, HISTORY_BAD_MIN, HISTORY_BAD } from "./risk.js";
 export { recentLaunches, chainLaunches } from "./launch.js";
 export { TIERS, NEW_CAP_DAYS, TRAPS, BIG_PROJECTS, tierFrom } from "./tier.js";
-export { PERFILES, BIG_EXTRA, scoreProfile, sectionOf, bornInLaunchpad } from "./perfil.js";
+export { PERFILES, BIG_EXTRA, WALLET_CAP, scoreProfile, sectionOf, bornInLaunchpad } from "./perfil.js";
 export { analyzeToken, analyzeWallet, analyzeAddress, sortResults } from "./wallet.js";
 export { holderBase, markBusy, onlyReceives, PASSIVE_SAMPLE, findFunder, findFunders, clusterByFunder, holderRows, creatorInfo, analyzeHolders,
   perHour, sourceRates, groupList, EXCHANGE_PER_HOUR, RATE_MIN_SIGS, YOUNG_DAYS, HOLD_GROUP_YOUNG, HOLD_GROUP_MATURE } from "./holders.js";

@@ -7,10 +7,14 @@
 // Sections: meme · rwa (tokenized assets) · defi · juegos (games) · ia (AI) · apps (apps and bots) · otros (other).
 // Fixed rules for all of them: a trap is RED; DIAMOND only for the hand-reviewed list (BIG_PROJECTS, trusted
 // issuers) and then with 90 points or more, and the list is GREEN at least; a token born in a launchpad (Pump.fun…)
-// is scored as a meme (plus code for AI and business for apps/other) and GREEN is its best; under 7 days, YELLOW.
+// is scored as a meme (plus code for AI and business for apps/other) and GREEN is its best; under 7 days, YELLOW;
+// in a meme, one person's wallet with 40 % or more of the supply: ORANGE at best (capWallet).
 // What we do not have yet ("falta") never adds or subtracts.
 
 import { BIG_PROJECTS, TRAPS, NEW_CAP_DAYS } from "./tier.js";
+
+// one person's wallet with this % of the supply or more caps a meme at ORANGE (case $ANSEM, 24/11/2026: 49,2 %)
+export const WALLET_CAP = 40;
 
 export const PERFILES = ["meme", "rwa", "defi", "juegos", "ia", "apps", "otros"];
 // Big projects added with the points by section (21/11): Pump.fun — one company (launchpad, PumpSwap, Terminal,
@@ -56,7 +60,7 @@ export function sectionOf(res, perfil) {
  *                (% of supply unlocked in 30 days and still locked; null = no Streamflow contracts),
  *                desv (price vs the real asset, 0.01 = 1 %), res (reserves: "si" | "parcial"), uso (true: used a lot)
  * @param [o.now] time (ms)
- * @returns {ap, pts, tier, cap, floor, trap, checks:[{k, col, p, d}]}  col: suma | resta | grave | neutro | falta
+ * @returns {ap, pts, tier, cap, capWallet, floor, trap, checks:[{k, col, p, d}]}  col: suma | resta | grave | neutro | falta
  */
 export function scoreProfile(res, perfil, o) {
   o = o || {};
@@ -97,8 +101,9 @@ export function scoreProfile(res, perfil, o) {
     if (has("CTL_FREEZE_ACTIVE")) add("control", -25);
     else if (has("CTL_TRANSFER_FEE") || has("CTL_TRANSFER_HOOK")) add("control", -10);
     else if (has("CTL_NONE") || has("CTL_ONLY_PROGRAMS")) add("control", 15);
-    if (w10 != null) add("reparto", w10 < 25 ? 10 : w10 > 60 ? -20 : w10 > 40 ? -10 : 0, w10);
-    if (w1 != null && w1 > 15) add("wallet", w1 > 50 ? -35 : w1 > 30 ? -15 : -5, w1);
+    // gradual, no steps: 49 % and 51 % must not score far apart (case $ANSEM, 24/11: 49,2 % only took -15)
+    if (w10 != null) add("reparto", w10 < 25 ? 10 : w10 > 40 ? -Math.min(20, Math.max(10, Math.round((w10 - 40) * 2 / 3))) : 0, w10);
+    if (w1 != null && w1 > 15) add("wallet", -Math.min(40, Math.max(5, Math.round(w1 - 15))), w1);
     add("liquidez", liq >= 1e5 ? 10 : liq >= 5e4 ? 5 : liq >= 2e4 ? -5 : liq >= 1e4 ? -10 : liq >= 1e3 ? -25 : -40, liq);
     if (liq < 1e3) dead = true;
     if (has("MKT_LP_PARTLY_LOCKED")) add("lp", -10);
@@ -171,5 +176,8 @@ export function scoreProfile(res, perfil, o) {
     }
     if (memeRules && dias != null && dias < NEW_CAP_DAYS && tier === "GREEN") { tier = "YELLOW"; cap = true; }
   }
-  return { ap: ap, lanz: lanz && memeRules && ap !== "meme", pts: n, tier: tier, cap: cap, floor: floor, trap: trap, dead: dead, checks: checks };
+  // one person's wallet (pools, programs and exchanges already left out of w1) can sink a meme on its own: ORANGE at best
+  let capWallet = false;
+  if (!trap && !dead && memeRules && w1 != null && w1 >= WALLET_CAP && (tier === "GREEN" || tier === "YELLOW")) { tier = "ORANGE"; capWallet = true; }
+  return { ap: ap, lanz: lanz && memeRules && ap !== "meme", pts: n, tier: tier, cap: cap, capWallet: capWallet, floor: floor, trap: trap, dead: dead, checks: checks };
 }
