@@ -119,7 +119,7 @@ export async function getConc(client, mint, supply) {
     const kind = await accountKinds(client, uniq(owners), true);   // emptied wallets (0 SOL) still count
     const agg = {};
     owners.forEach(function (o, i) { agg[o] = (agg[o] || 0) + amts[i]; });
-    const ws = [], exs = {}, mms = {};
+    const ws = [], wo = [], exs = {}, mms = {};
     let prog = 0, ex = 0, mm = 0;
     Object.keys(agg).forEach(function (o) {
       const k = knownWallet(o);
@@ -133,6 +133,7 @@ export async function getConc(client, mint, supply) {
     ws.sort(function (x, y) { return y - x; });
     out.ok = true; out.nW = ws.length;
     out.w1 = ws.length ? ws[0] / supply * 100 : 0;
+    if (wo.length) out.w1a = wo.sort(function (x, y) { return y[1] - x[1]; })[0][0];   // who the biggest person-wallet is (0.8.0)
     out.w10 = ws.slice(0, 10).reduce(function (s, x) { return s + x; }, 0) / supply * 100;
     out.prog = prog / supply * 100;
     if (ex) {
