@@ -20,6 +20,13 @@ export const KNOWN_WALLETS = {
   "A77HErqtfN1hLLpvZ9pCtu66FEtM8BveoaKbbMoZ4RiR": { n: "Bitget", t: "exchange" },
   "88xTWZMeKfiTgbfEmPLdsUCQcZinwUfk25EBQZ21XMAZ": { n: "HTX", t: "exchange" },
   "6FEVkH17P9y8Q9aCkDdPcMDjvj7SVxrTETaYEm8f51Jy": { n: "Crypto.com", t: "exchange" },
+  // 26 Nov 2026: found holding 5 % or more of several Ecosystem tokens at once; public name or tag on Solscan
+  "CLNEVwuSAiGsvPtE74yLhda4beNfd8qfZXVKkUcAJZDL": { n: "Gate", t: "exchange" },
+  "3gd3dqgtJ4jWfBfLYTX67DALFetjc5iS72sCgRhCkW2u": { n: "Binance", t: "exchange" },
+  "51yZyDSnec4xnUv7XLRVYcDyV4x3wUtzrDcRaYbmQU5j": { n: "Robinhood", t: "exchange" },
+  "42brAgAVNzMBP7aaktPvAmBSPEkehnFQejiZc53EpJFd": { n: "Bybit", t: "exchange" },
+  "6LY1JzAFVZsP2a2xKrtU6znQMQ5h4i7tocWdgrkZzkzF": { n: "Kraken", t: "exchange" },
+  "5PAhQiYdLBd6SVdjzBQDxUAEFyDdF5ExNPQfcscnPRj5": { n: "MEXC", t: "exchange" },
   // Market makers: named, but they DO count in concentration (their own inventory, they can sell).
   // Wintermute: Solscan public names (7 Nov 2026, solscan.io/labelcloud/wintermute).
   "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa": { n: "Wintermute", t: "market_maker" },
