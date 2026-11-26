@@ -200,6 +200,7 @@ export function buildLights(info, conc, pair, value, type, rc, now, launches) {
     if (conc.w1a) data.w1a = conc.w1a;                                              // address of the biggest person-wallet (0.8.0)
     if (conc.ex) { data.ex = conc.ex; data.exn = conc.exn; }                       // named exchanges, shown but not counted
     if (conc.mm) { data.mm = conc.mm; data.mmn = conc.mmn; }                       // named market makers, shown and counted
+    if (conc.pj) { data.pj = conc.pj; data.pjn = conc.pjn; }                       // the project's own wallets (0.8.3), shown and counted
     let code = !conc.nW ? (conc.ex ? "CON_EXCHANGES" : "CON_ALL_POOLS") : (st === "ok" ? "CON_OK" : "CON_HIGH");
     // under a verified issuer the big holders are its treasury, custodians, exchanges and lending
     // protocols, not someone about to dump: shown, not counted (PYUSD 56% in one wallet, 1/11)

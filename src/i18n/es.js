@@ -16,6 +16,8 @@ function prog(d) {
   // creadores de mercado con nombre: sí cuentan (es su inventario y lo pueden vender)
   if (d && d.mm >= 1 && d.mmn && d.mmn.length) s += ". " + d.mmn.slice(0, 2).join(" y ") + " (creador" + (d.mmn.length > 1 ? "es" : "") + " de mercado) " +
     (d.mmn.length > 1 ? "tienen" : "tiene") + " el " + pct(d.mm) + ": cuenta, porque lo puede" + (d.mmn.length > 1 ? "n" : "") + " vender";
+  // wallets del propio proyecto (tesorería, emisor, creador): sí cuentan, el proyecto lo puede vender (0.8.3)
+  if (d && d.pj >= 1 && d.pjn && d.pjn.length) s += ". Wallets del propio proyecto (" + d.pjn.slice(0, 2).join(" y ") + ") tienen el " + pct(d.pj) + ": cuenta, porque lo puede vender";
   return s;
 }
 
