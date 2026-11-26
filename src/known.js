@@ -31,8 +31,8 @@ export const KNOWN_WALLETS = {
   "FQEmsV5A6jZdmb3KuP3YBLmHfFNoKuoWddBGMQuW1M9f": { n: "Bybit", t: "exchange" },
   // Custodians (0.8.3): keep funds for institutions, so a big balance is not one person; named, left out of the count
   "6427KSfRCUURDHsNir5GBJhdSYPLi1nfxAtTv4PVpJxF": { n: "Fireblocks", t: "custodian" },
-  // Project wallets (0.8.3): the project's own treasury, issuer, creator or team. Named, but they DO count in
-  // concentration (the project can sell). r = role: treasury | issuer | creator. Public name on Solscan (26 Nov 2026),
+  // Project wallets (0.8.3): the project's own treasury, issuer, creator or team. Named and, since 0.8.4, kept apart
+  // from "the biggest person-wallet" and the top 10 (a treasury is not a whale). r = role: treasury | issuer | creator. Public name on Solscan (26 Nov 2026),
   // or, for IdleMine, funded by the project's own Squads vault "Idle26".
   "8pFhUqCU7Fkxfg2DLytRDf7a9oK4XGtN92PrYwtVQc6G": { n: "Raydium", t: "project", r: "treasury" },
   "5gUuDFHswKi2QMA1qJHf6FEVhNCrHnyAdfWniMaUUPE4": { n: "Paxos", t: "project", r: "issuer" },

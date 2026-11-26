@@ -124,10 +124,11 @@ export async function getConc(client, mint, supply) {
     Object.keys(agg).forEach(function (o) {
       const k = knownWallet(o);
       if (kind[o] === "wallet" && k && (k.t === "exchange" || k.t === "custodian")) { ex += agg[o]; exs[k.n] = (exs[k.n] || 0) + agg[o]; }   // users' funds, not one person
+      // the project's own wallet (treasury, issuer, creator): named and kept apart, it is not "the biggest person-wallet" (0.8.4)
+      else if (kind[o] === "wallet" && k && k.t === "project") { pj += agg[o]; pjs[k.n] = (pjs[k.n] || 0) + agg[o]; }
       else if (kind[o] === "wallet") {
         ws.push(agg[o]); wo.push([o, agg[o]]);
         if (k && k.t === "market_maker") { mm += agg[o]; mms[k.n] = (mms[k.n] || 0) + agg[o]; }   // named, still counted
-        if (k && k.t === "project") { pj += agg[o]; pjs[k.n] = (pjs[k.n] || 0) + agg[o]; }        // the project's own wallet (0.8.3): named, still counted
       }
       else prog += agg[o];
     });

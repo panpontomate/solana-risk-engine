@@ -12,7 +12,7 @@ function prog(d) {
     " hold" + (d.exn && d.exn.length === 1 ? "s" : "") + " " + pct(d.ex) + ": their users' funds, not counted";
   if (d && d.mm >= 1 && d.mmn && d.mmn.length) s += ". " + d.mmn.slice(0, 2).join(" and ") + " (market maker" + (d.mmn.length > 1 ? "s" : "") + ") " +
     (d.mmn.length > 1 ? "hold" : "holds") + " " + pct(d.mm) + ": counted, as " + (d.mmn.length > 1 ? "they" : "it") + " can sell it";
-  if (d && d.pj >= 1 && d.pjn && d.pjn.length) s += ". The project's own wallets (" + d.pjn.slice(0, 2).join(" and ") + ") hold " + pct(d.pj) + ": counted, as it can sell them";
+  if (d && d.pj >= 1 && d.pjn && d.pjn.length) s += ". The project's own wallets (" + d.pjn.slice(0, 2).join(" and ") + ") hold " + pct(d.pj) + ": kept apart, not one person";
   return s;
 }
 
